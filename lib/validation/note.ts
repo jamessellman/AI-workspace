@@ -1,0 +1,17 @@
+import { z } from "zod"
+
+export const createNoteSchema = z.object({
+  title: z.string().trim().max(200).optional(),
+  body: z.string().trim().min(1, "Note body is required.").max(20000),
+  category: z.string().trim().max(60).optional(),
+})
+
+export const updateNoteSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().trim().max(200).optional(),
+  body: z.string().trim().min(1).max(20000).optional(),
+  category: z.string().trim().max(60).optional(),
+})
+
+export type CreateNoteInput = z.infer<typeof createNoteSchema>
+export type UpdateNoteInput = z.infer<typeof updateNoteSchema>
