@@ -64,9 +64,9 @@ cp .env.example .env.local
 
 | Variable | Where | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API | Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | same | Public anon key (browser-safe) |
-| `SUPABASE_SERVICE_ROLE_KEY` | same | **Server-only.** Privileged maintenance |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API Keys | Project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | same | Publishable key `sb_publishable_…` (browser-safe) |
+| `SUPABASE_SECRET_KEY` | same | Secret key `sb_secret_…` — **server-only**, privileged maintenance |
 | `OPENAI_API_KEY` | platform.openai.com | Phase 2 chat (function calling) |
 | `OPENAI_MODEL` | optional | Defaults to `gpt-4o-mini` |
 
