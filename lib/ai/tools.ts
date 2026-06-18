@@ -10,7 +10,7 @@ import {
   updateDocument,
 } from "@/lib/actions/documents"
 import { createFolder, listFolders } from "@/lib/actions/folders"
-import { createNote, searchNotes } from "@/lib/actions/notes"
+import { createNote, listNotes, searchNotes } from "@/lib/actions/notes"
 import { createTask, listTasks, moveTask, updateTask } from "@/lib/actions/tasks"
 import { listTimesheets, logTime } from "@/lib/actions/timesheets"
 import { chatModel } from "@/lib/ai/provider"
@@ -208,6 +208,28 @@ export const tools = {
     }),
     execute: async (input): Promise<NoteListResult> => {
       const notes = await searchNotes(input.query)
+      return { notes, count: notes.length }
+    },
+  }),
+
+  list_notes: tool({
+    description:
+      "List the user's notes (most recent first) with their full content, optionally filtered to a folder by name. Use this to find notes by title and read them so you can compile, merge, summarise, or rewrite them into a new note.",
+    inputSchema: z.object({
+      folder: z
+        .string()
+        .optional()
+        .describe("Optional folder name to list notes from."),
+    }),
+    execute: async (input): Promise<NoteListResult> => {
+      let notes = await listNotes()
+      const folderName = input.folder?.trim()
+      if (folderName) {
+        const folder = (await listFolders()).find(
+          (f) => f.name.toLowerCase() === folderName.toLowerCase()
+        )
+        notes = folder ? notes.filter((n) => n.folder_id === folder.id) : []
+      }
       return { notes, count: notes.length }
     },
   }),

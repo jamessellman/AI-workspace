@@ -25,6 +25,7 @@ const TOOL_LABELS: Record<string, string> = {
   list_tasks: "Tasks loaded",
   create_note: "Note saved",
   search_notes: "Notes found",
+  list_notes: "Notes loaded",
   create_folder: "Folder ready",
   list_folders: "Folders loaded",
   log_time: "Time logged",

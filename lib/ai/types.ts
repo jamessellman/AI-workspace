@@ -69,6 +69,7 @@ export type ToolName =
   | "list_tasks"
   | "create_note"
   | "search_notes"
+  | "list_notes"
   | "create_folder"
   | "list_folders"
   | "log_time"

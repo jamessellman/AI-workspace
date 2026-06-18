@@ -219,6 +219,7 @@ export function ToolResult({
     case "create_note":
       return <NoteCards notes={[(output as NoteResult).note]} />
     case "search_notes":
+    case "list_notes":
       return <NoteCards notes={(output as NoteListResult).notes} />
     case "create_folder":
       return (
