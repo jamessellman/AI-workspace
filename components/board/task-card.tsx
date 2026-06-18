@@ -93,21 +93,22 @@ export function SortableTaskCard({
       ref={setNodeRef}
       style={style}
       data-slot="task-card"
+      {...attributes}
+      {...listeners}
       className={cn(
         "group/task flex-row items-start gap-1 p-2.5 shadow-xs transition-all duration-200",
+        // The whole card is the drag handle — grab it anywhere and pull.
+        "cursor-grab touch-none select-none active:cursor-grabbing",
         "hover:border-primary/50 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_var(--primary)]",
         isDragging && "opacity-50"
       )}
     >
-      <button
-        type="button"
-        className="text-muted-foreground hover:text-primary -ml-1 cursor-grab touch-none pt-0.5 opacity-60 transition-[color,opacity] group-hover/task:opacity-100 active:cursor-grabbing"
-        aria-label="Drag task"
-        {...attributes}
-        {...listeners}
+      <span
+        aria-hidden
+        className="text-muted-foreground/70 -ml-1 pt-0.5 opacity-60 transition-opacity group-hover/task:opacity-100"
       >
         <GripVertical className="size-4" />
-      </button>
+      </span>
 
       <TaskCardContent task={task} />
 
@@ -117,6 +118,8 @@ export function SortableTaskCard({
             variant="ghost"
             size="icon-xs"
             aria-label="Task actions"
+            // Don't let interacting with the menu start a drag.
+            onPointerDown={(e) => e.stopPropagation()}
             className="opacity-60 transition-opacity group-hover/task:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
           >
             <MoreHorizontal />
