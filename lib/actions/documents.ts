@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { requireUser } from "@/lib/actions/utils"
+import { requireUser, sanitizeFilterTerm } from "@/lib/actions/utils"
 import { DOCUMENTS_BUCKET } from "@/lib/constants"
 import {
   recordDocumentSchema,
@@ -28,9 +28,9 @@ export async function listDocuments(query?: string): Promise<DocumentRow[]> {
     .select("*")
     .order("created_at", { ascending: false })
 
-  const trimmed = query?.trim()
-  if (trimmed) {
-    const like = `%${trimmed}%`
+  const term = query ? sanitizeFilterTerm(query) : ""
+  if (term) {
+    const like = `%${term}%`
     q = q.or(
       `filename.ilike.${like},category.ilike.${like},summary.ilike.${like}`
     )

@@ -19,3 +19,17 @@ export async function requireUser() {
 
   return { supabase, userId: user.id }
 }
+
+/**
+ * Neutralise characters that carry meaning in a PostgREST `.or()` filter string
+ * — `,` separates conditions, `()` group, `*` is the wildcard, `:`/`"` affect
+ * quoting — so a free-text search term can't alter the query's structure. RLS
+ * already bounds results to the current user; this keeps the filter itself
+ * well-formed and free of injected conditions.
+ */
+export function sanitizeFilterTerm(term: string): string {
+  return term
+    .replace(/[,()*:"\\]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}

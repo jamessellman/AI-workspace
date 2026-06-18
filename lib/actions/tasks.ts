@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
-import { requireUser } from "@/lib/actions/utils"
+import { requireUser, sanitizeFilterTerm } from "@/lib/actions/utils"
 import {
   createTaskSchema,
   reorderSchema,
@@ -36,8 +36,9 @@ export async function listTasks(filter?: {
   if (filter?.status) {
     q = q.eq("status", filter.status)
   }
-  if (filter?.query) {
-    const like = `%${filter.query}%`
+  const term = filter?.query ? sanitizeFilterTerm(filter.query) : ""
+  if (term) {
+    const like = `%${term}%`
     q = q.or(`title.ilike.${like},description.ilike.${like}`)
   }
 
