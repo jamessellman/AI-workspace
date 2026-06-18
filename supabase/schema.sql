@@ -232,3 +232,34 @@ create policy "documents_storage_delete_own" on storage.objects
     bucket_id = 'documents'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ===========================================================================
+-- Storage — public `avatars` bucket. Objects are served via their public URL
+-- (no SELECT policy needed); a user can only write within their own
+-- `{user_id}/` folder. We deliberately omit a broad SELECT policy so clients
+-- can't list everyone's files.
+-- ===========================================================================
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+drop policy if exists "avatars_insert_own" on storage.objects;
+create policy "avatars_insert_own" on storage.objects
+  for insert with check (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "avatars_update_own" on storage.objects;
+create policy "avatars_update_own" on storage.objects
+  for update using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "avatars_delete_own" on storage.objects;
+create policy "avatars_delete_own" on storage.objects
+  for delete using (
+    bucket_id = 'avatars'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );

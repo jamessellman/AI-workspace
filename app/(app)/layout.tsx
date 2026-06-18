@@ -1,12 +1,15 @@
+import Link from "next/link"
 import { redirect } from "next/navigation"
+import { UserCog } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/server"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SignOutMenuItem } from "@/components/sign-out-button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -33,7 +36,10 @@ export default async function AppLayout({
   }
 
   const email = user.email ?? "Account"
-  const initial = email.charAt(0).toUpperCase()
+  const displayName =
+    (user.user_metadata?.display_name as string | null) || null
+  const avatarUrl = (user.user_metadata?.avatar_url as string | null) || null
+  const initial = (displayName || email).charAt(0).toUpperCase()
 
   return (
     <SidebarProvider
@@ -46,15 +52,30 @@ export default async function AppLayout({
           <Separator orientation="vertical" className="mr-1 h-4" />
           <div className="ml-auto">
             <DropdownMenu>
-              <DropdownMenuTrigger className="outline-none">
+              <DropdownMenuTrigger className="ring-offset-background focus-visible:ring-ring rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-offset-2">
                 <Avatar className="size-8">
+                  {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
                   <AvatarFallback>{initial}</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel className="truncate font-normal">
-                  {email}
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col">
+                    {displayName ? (
+                      <span className="truncate font-medium">{displayName}</span>
+                    ) : null}
+                    <span className="text-muted-foreground truncate text-xs font-normal">
+                      {email}
+                    </span>
+                  </div>
                 </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/account">
+                    <UserCog />
+                    Account settings
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <SignOutMenuItem />
               </DropdownMenuContent>
