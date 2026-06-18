@@ -43,7 +43,7 @@ const formSchema = z.object({
   title: z.string().trim().max(200).optional(),
   category: z.string().trim().max(60).optional(),
   folderId: z.string().optional(),
-  body: z.string().trim().min(1, "Write something first.").max(20000),
+  body: z.string().trim().min(1, "Write something first.").max(50000),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -124,7 +124,7 @@ export function NoteEditor({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-1 flex-col gap-4 overflow-hidden px-4"
+            className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4"
           >
             <FormField
               control={form.control}
@@ -183,11 +183,11 @@ export function NoteEditor({
               control={form.control}
               name="body"
               render={({ field }) => (
-                <FormItem className="flex flex-1 flex-col">
+                <FormItem className="flex min-h-0 flex-1 flex-col">
                   <FormLabel>Note</FormLabel>
                   <FormControl>
                     <Textarea
-                      className="flex-1 resize-none"
+                      className="field-sizing-fixed min-h-0 flex-1 resize-none overflow-y-auto"
                       placeholder="Write your note…"
                       {...field}
                     />

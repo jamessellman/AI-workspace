@@ -2,7 +2,7 @@ import { z } from "zod"
 
 export const createNoteSchema = z.object({
   title: z.string().trim().max(200).optional(),
-  body: z.string().trim().min(1, "Note body is required.").max(20000),
+  body: z.string().trim().min(1, "Note body is required.").max(50000),
   category: z.string().trim().max(60).optional(),
   folderId: z.string().uuid().nullable().optional(),
 })
@@ -10,7 +10,7 @@ export const createNoteSchema = z.object({
 export const updateNoteSchema = z.object({
   id: z.string().uuid(),
   title: z.string().trim().max(200).optional(),
-  body: z.string().trim().min(1).max(20000).optional(),
+  body: z.string().trim().min(1).max(50000).optional(),
   category: z.string().trim().max(60).optional(),
   folderId: z.string().uuid().nullable().optional(),
 })
