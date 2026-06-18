@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { format } from "date-fns"
-import { CalendarIcon, Loader2 } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
 
@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import type { Task, TaskStatus } from "@/types/database"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Dialog,
   DialogContent,
@@ -245,7 +246,7 @@ export function TaskDialog({
 
             <DialogFooter>
               <Button type="submit" disabled={isPending}>
-                {isPending ? <Loader2 className="animate-spin" /> : null}
+                {isPending ? <Spinner /> : null}
                 {isEdit ? "Save changes" : "Create task"}
               </Button>
             </DialogFooter>

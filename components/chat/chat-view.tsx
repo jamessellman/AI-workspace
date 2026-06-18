@@ -8,6 +8,7 @@ import { toast } from "sonner"
 
 import { ToolResult } from "@/components/chat/tool-result"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
@@ -175,8 +176,9 @@ export function ChatView() {
                 return (
                   <div
                     key={index}
-                    className="text-muted-foreground max-w-[90%] text-xs"
+                    className="text-muted-foreground flex max-w-[90%] items-center gap-2 text-xs"
                   >
+                    <Spinner className="size-3.5 text-primary" />
                     Working…
                   </div>
                 )
@@ -185,7 +187,10 @@ export function ChatView() {
           ))}
 
           {status === "submitted" ? (
-            <div className="text-muted-foreground text-xs">Thinking…</div>
+            <div className="text-muted-foreground flex items-center gap-2 text-xs">
+              <Spinner className="size-3.5 text-primary" />
+              Thinking…
+            </div>
           ) : null}
           {error ? (
             <div className="text-destructive text-xs">

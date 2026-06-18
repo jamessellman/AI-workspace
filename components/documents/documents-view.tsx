@@ -6,7 +6,6 @@ import { format } from "date-fns"
 import {
   Download,
   FileText,
-  Loader2,
   MoreHorizontal,
   Search,
   Trash2,
@@ -24,6 +23,7 @@ import { createClient } from "@/lib/supabase/client"
 import type { DocumentRow } from "@/types/database"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Card } from "@/components/ui/card"
 import {
   Dialog,
@@ -192,7 +192,7 @@ export function DocumentsView({
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
         >
-          {uploading ? <Loader2 className="animate-spin" /> : <Upload />}
+          {uploading ? <Spinner /> : <Upload />}
           Upload
         </Button>
       </div>

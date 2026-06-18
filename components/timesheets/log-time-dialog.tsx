@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { format } from "date-fns"
-import { CalendarIcon, Loader2, Plus } from "lucide-react"
+import { CalendarIcon, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
 
@@ -13,6 +13,7 @@ import { logTime } from "@/lib/actions/timesheets"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Dialog,
   DialogContent,
@@ -191,7 +192,7 @@ export function LogTimeDialog() {
 
             <DialogFooter>
               <Button type="submit" disabled={isPending}>
-                {isPending ? <Loader2 className="animate-spin" /> : null}
+                {isPending ? <Spinner /> : null}
                 Log time
               </Button>
             </DialogFooter>

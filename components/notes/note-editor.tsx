@@ -4,13 +4,13 @@ import { useEffect, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { z } from "zod"
 
 import { createNote, updateNote } from "@/lib/actions/notes"
 import type { Note } from "@/types/database"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Form,
   FormControl,
@@ -153,7 +153,7 @@ export function NoteEditor({
 
             <SheetFooter className="px-0">
               <Button type="submit" disabled={isPending}>
-                {isPending ? <Loader2 className="animate-spin" /> : null}
+                {isPending ? <Spinner /> : null}
                 {isEdit ? "Save note" : "Create note"}
               </Button>
             </SheetFooter>

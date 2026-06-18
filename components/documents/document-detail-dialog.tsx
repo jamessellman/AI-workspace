@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Download, Loader2 } from "lucide-react"
+import { Download } from "lucide-react"
 import { toast } from "sonner"
 
 import { updateDocument } from "@/lib/actions/documents"
 import type { DocumentRow } from "@/types/database"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Dialog,
   DialogContent,
@@ -136,7 +137,7 @@ export function DocumentDetailDialog({
             Download
           </Button>
           <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? <Loader2 className="animate-spin" /> : null}
+            {isPending ? <Spinner /> : null}
             Save changes
           </Button>
         </DialogFooter>

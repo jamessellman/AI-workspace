@@ -4,11 +4,11 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import { Loader2 } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/client"
 import { loginSchema, type LoginValues } from "@/lib/validation/auth"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Card,
   CardContent,
@@ -107,7 +107,7 @@ export function LoginForm() {
             >
               {form.formState.isSubmitting ? (
                 <>
-                  <Loader2 className="animate-spin" />
+                  <Spinner />
                   Signing in…
                 </>
               ) : (

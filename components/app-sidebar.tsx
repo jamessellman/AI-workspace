@@ -52,11 +52,11 @@ export function AppSidebar() {
           </span>
         </div>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+      <SidebarContent className="pt-2">
+        <SidebarGroup className="gap-1">
+          <SidebarGroupLabel className="mb-1">Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-2">
               {NAV_ITEMS.map((item) => {
                 const isActive =
                   pathname === item.href || pathname.startsWith(`${item.href}/`)
@@ -66,6 +66,8 @@ export function AppSidebar() {
                       asChild
                       isActive={isActive}
                       className={cn(
+                        // Taller rows for more vertical breathing room.
+                        "h-10",
                         // Animated left accent bar + slide-in on hover/active.
                         "relative overflow-hidden transition-[transform,background-color,color,box-shadow] duration-200 ease-out hover:translate-x-1",
                         "before:bg-primary before:absolute before:top-1/2 before:left-0 before:h-0 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:transition-all before:duration-300 before:content-['']",
