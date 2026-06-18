@@ -59,6 +59,7 @@ export async function createNote(input: CreateNoteInput): Promise<Note> {
       title,
       body: values.body,
       category: values.category?.trim() || "general",
+      folder_id: values.folderId ?? null,
     })
     .select("*")
     .single()
@@ -76,6 +77,7 @@ export async function updateNote(input: UpdateNoteInput): Promise<Note> {
   if (values.title !== undefined) patch.title = values.title
   if (values.body !== undefined) patch.body = values.body
   if (values.category !== undefined) patch.category = values.category
+  if (values.folderId !== undefined) patch.folder_id = values.folderId
 
   const { data, error } = await supabase
     .from("notes")
@@ -87,6 +89,20 @@ export async function updateNote(input: UpdateNoteInput): Promise<Note> {
   if (error) throw new Error(error.message)
   revalidatePath("/notes")
   return data
+}
+
+/** Move a note into a folder, or out of all folders when folderId is null. */
+export async function moveNoteToFolder(
+  id: string,
+  folderId: string | null
+): Promise<void> {
+  const { supabase } = await requireUser()
+  const { error } = await supabase
+    .from("notes")
+    .update({ folder_id: folderId })
+    .eq("id", id)
+  if (error) throw new Error(error.message)
+  revalidatePath("/notes")
 }
 
 export async function deleteNote(id: string): Promise<void> {

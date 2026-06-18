@@ -45,6 +45,7 @@ export interface Database {
           title: string
           body: string
           category: string
+          folder_id: string | null
           created_at: string
           updated_at: string
         }
@@ -54,10 +55,29 @@ export interface Database {
           title: string
           body: string
           category?: string
+          folder_id?: string | null
           created_at?: string
           updated_at?: string
         }
         Update: Partial<Database["public"]["Tables"]["notes"]["Insert"]>
+        Relationships: []
+      }
+      folders: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["folders"]["Insert"]>
         Relationships: []
       }
       timesheets: {
@@ -125,5 +145,6 @@ export interface Database {
 // Convenience row aliases used throughout the app.
 export type Task = Database["public"]["Tables"]["tasks"]["Row"]
 export type Note = Database["public"]["Tables"]["notes"]["Row"]
+export type Folder = Database["public"]["Tables"]["folders"]["Row"]
 export type Timesheet = Database["public"]["Tables"]["timesheets"]["Row"]
 export type DocumentRow = Database["public"]["Tables"]["documents"]["Row"]

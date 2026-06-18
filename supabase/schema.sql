@@ -263,3 +263,41 @@ create policy "avatars_delete_own" on storage.objects
     bucket_id = 'avatars'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- ===========================================================================
+-- folders  (organise notes; a note belongs to at most one folder)
+-- ===========================================================================
+create table if not exists public.folders (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  name       text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists folders_user_id_idx on public.folders (user_id);
+
+drop trigger if exists folders_set_updated_at on public.folders;
+create trigger folders_set_updated_at
+  before update on public.folders
+  for each row execute function public.set_updated_at();
+
+-- Deleting a folder un-files its notes (keeps them), rather than deleting them.
+alter table public.notes
+  add column if not exists folder_id uuid references public.folders (id) on delete set null;
+create index if not exists notes_folder_id_idx on public.notes (folder_id);
+
+alter table public.folders enable row level security;
+
+drop policy if exists "folders_select_own" on public.folders;
+create policy "folders_select_own" on public.folders
+  for select using (user_id = auth.uid());
+drop policy if exists "folders_insert_own" on public.folders;
+create policy "folders_insert_own" on public.folders
+  for insert with check (user_id = auth.uid());
+drop policy if exists "folders_update_own" on public.folders;
+create policy "folders_update_own" on public.folders
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "folders_delete_own" on public.folders;
+create policy "folders_delete_own" on public.folders
+  for delete using (user_id = auth.uid());

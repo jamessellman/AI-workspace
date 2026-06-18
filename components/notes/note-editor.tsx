@@ -21,6 +21,13 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -30,9 +37,12 @@ import {
 } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
 
+const NO_FOLDER = "none"
+
 const formSchema = z.object({
   title: z.string().trim().max(200).optional(),
   category: z.string().trim().max(60).optional(),
+  folderId: z.string().optional(),
   body: z.string().trim().min(1, "Write something first.").max(20000),
 })
 
@@ -42,10 +52,14 @@ export function NoteEditor({
   open,
   onOpenChange,
   note,
+  folders,
+  defaultFolderId,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   note?: Note | null
+  folders: { id: string; name: string }[]
+  defaultFolderId?: string | null
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -53,7 +67,7 @@ export function NoteEditor({
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { title: "", category: "", body: "" },
+    defaultValues: { title: "", category: "", folderId: NO_FOLDER, body: "" },
   })
 
   useEffect(() => {
@@ -61,11 +75,14 @@ export function NoteEditor({
     form.reset({
       title: note?.title ?? "",
       category: note?.category ?? "",
+      folderId: note ? (note.folder_id ?? NO_FOLDER) : (defaultFolderId ?? NO_FOLDER),
       body: note?.body ?? "",
     })
-  }, [open, note, form])
+  }, [open, note, defaultFolderId, form])
 
   function onSubmit(values: FormValues) {
+    const folderId =
+      values.folderId && values.folderId !== NO_FOLDER ? values.folderId : null
     startTransition(async () => {
       try {
         if (isEdit && note) {
@@ -74,6 +91,7 @@ export function NoteEditor({
             title: values.title || undefined,
             category: values.category || undefined,
             body: values.body,
+            folderId,
           })
           toast.success("Note saved")
         } else {
@@ -81,6 +99,7 @@ export function NoteEditor({
             title: values.title || undefined,
             category: values.category || undefined,
             body: values.body,
+            folderId,
           })
           toast.success("Note created")
         }
@@ -98,7 +117,7 @@ export function NoteEditor({
         <SheetHeader>
           <SheetTitle>{isEdit ? "Edit note" : "New note"}</SheetTitle>
           <SheetDescription>
-            Capture a thought. Title and category are optional.
+            Capture a thought. Title, category and folder are optional.
           </SheetDescription>
         </SheetHeader>
 
@@ -120,19 +139,46 @@ export function NoteEditor({
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. meeting, idea" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. meeting" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="folderId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Folder</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Unfiled" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NO_FOLDER}>Unfiled</SelectItem>
+                        {folders.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            {f.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={form.control}
               name="body"
