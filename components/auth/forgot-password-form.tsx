@@ -31,8 +31,14 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 
-export function ForgotPasswordForm() {
-  const [serverError, setServerError] = useState<string | null>(null)
+export function ForgotPasswordForm({
+  initialError,
+}: {
+  initialError?: string
+}) {
+  const [serverError, setServerError] = useState<string | null>(
+    initialError ?? null
+  )
   const [sent, setSent] = useState(false)
 
   const form = useForm<ForgotPasswordValues>({
