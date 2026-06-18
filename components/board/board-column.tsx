@@ -57,7 +57,7 @@ export function BoardColumn({
         ref={setNodeRef}
         className={cn(
           "bg-muted/40 flex min-h-24 flex-1 flex-col gap-2 rounded-lg p-2 transition-colors",
-          isOver && "bg-muted ring-ring/40 ring-2"
+          isOver && "bg-primary/10 ring-primary/50 ring-2"
         )}
       >
         <SortableContext

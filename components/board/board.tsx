@@ -266,7 +266,7 @@ export function Board({ initialTasks }: { initialTasks: Task[] }) {
 
         <DragOverlay>
           {activeTask ? (
-            <Card className="flex-row items-start gap-1 p-2.5 shadow-md">
+            <Card className="border-primary/60 flex-row items-start gap-1 rotate-2 scale-[1.03] cursor-grabbing p-2.5 shadow-[0_18px_44px_-12px_var(--primary)]">
               <TaskCardContent task={activeTask} />
             </Card>
           ) : null}

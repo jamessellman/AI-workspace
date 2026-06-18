@@ -94,13 +94,14 @@ export function SortableTaskCard({
       style={style}
       data-slot="task-card"
       className={cn(
-        "flex-row items-start gap-1 p-2.5 shadow-xs",
+        "group/task flex-row items-start gap-1 p-2.5 shadow-xs transition-all duration-200",
+        "hover:border-primary/50 hover:-translate-y-0.5 hover:shadow-[0_10px_28px_-14px_var(--primary)]",
         isDragging && "opacity-50"
       )}
     >
       <button
         type="button"
-        className="text-muted-foreground hover:text-foreground -ml-1 cursor-grab touch-none pt-0.5 active:cursor-grabbing"
+        className="text-muted-foreground hover:text-primary -ml-1 cursor-grab touch-none pt-0.5 opacity-60 transition-[color,opacity] group-hover/task:opacity-100 active:cursor-grabbing"
         aria-label="Drag task"
         {...attributes}
         {...listeners}
@@ -112,7 +113,12 @@ export function SortableTaskCard({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-xs" aria-label="Task actions">
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="Task actions"
+            className="opacity-60 transition-opacity group-hover/task:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+          >
             <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>
