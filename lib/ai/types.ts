@@ -1,4 +1,10 @@
-import type { DocumentRow, Note, Task, Timesheet } from "@/types/database"
+import type {
+  DocumentRow,
+  Folder,
+  Note,
+  Task,
+  Timesheet,
+} from "@/types/database"
 
 /**
  * Result shapes returned by the AI tools in `lib/ai/tools.ts`.
@@ -46,6 +52,15 @@ export interface DocumentSummaryResult {
   summary: string
 }
 
+export interface FolderResult {
+  folder: Folder
+}
+
+export interface FolderListResult {
+  folders: Folder[]
+  count: number
+}
+
 /** Names of every tool the model can call. Keep in sync with `tools.ts`. */
 export type ToolName =
   | "create_task"
@@ -54,6 +69,8 @@ export type ToolName =
   | "list_tasks"
   | "create_note"
   | "search_notes"
+  | "create_folder"
+  | "list_folders"
   | "log_time"
   | "list_time"
   | "search_documents"

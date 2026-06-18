@@ -9,6 +9,7 @@ import {
   searchDocuments,
   updateDocument,
 } from "@/lib/actions/documents"
+import { createFolder, listFolders } from "@/lib/actions/folders"
 import { createNote, searchNotes } from "@/lib/actions/notes"
 import { createTask, listTasks, moveTask, updateTask } from "@/lib/actions/tasks"
 import { listTimesheets, logTime } from "@/lib/actions/timesheets"
@@ -16,6 +17,8 @@ import { chatModel } from "@/lib/ai/provider"
 import type {
   DocumentListResult,
   DocumentSummaryResult,
+  FolderListResult,
+  FolderResult,
   NoteListResult,
   NoteResult,
   TaskListResult,
@@ -40,6 +43,19 @@ const ISO_DATE = z
 // summarised from metadata to avoid shipping a binary parser.
 const TEXTUAL_MIME = /^(text\/|application\/(json|xml|x-yaml|yaml))/i
 const MAX_SUMMARY_INPUT = 24_000
+
+/** Resolve a folder name to an id, reusing an existing folder (case-insensitive)
+ * or creating one. Returns null when no folder name is given. */
+async function resolveFolderId(name: string | undefined): Promise<string | null> {
+  const trimmed = name?.trim()
+  if (!trimmed) return null
+  const existing = (await listFolders()).find(
+    (f) => f.name.toLowerCase() === trimmed.toLowerCase()
+  )
+  if (existing) return existing.id
+  const created = await createFolder({ name: trimmed })
+  return created.id
+}
 
 export const tools = {
   create_task: tool({
@@ -128,7 +144,7 @@ export const tools = {
 
   create_note: tool({
     description:
-      "Store a note. You MUST first reformat the user's raw content into a clean, concise summary (a few tidy sentences or bullet points) and assign a single short category (e.g. 'meeting', 'idea', 'finance'). Pass the reformatted text as `body`, not the raw input.",
+      "Store a note. You MUST first reformat the user's raw content into a clean, concise summary (a few tidy sentences or bullet points) and assign a single short category (e.g. 'meeting', 'idea', 'finance'). Pass the reformatted text as `body`, not the raw input. Optionally file it into a folder by name.",
     inputSchema: z.object({
       title: z
         .string()
@@ -140,14 +156,47 @@ export const tools = {
       category: z
         .string()
         .describe("A single short category you assigned to this note."),
+      folder: z
+        .string()
+        .optional()
+        .describe(
+          "Optional folder name to file this note under. Reuses an existing folder with that name, or creates it. Check list_folders first to match an existing one."
+        ),
     }),
     execute: async (input): Promise<NoteResult> => {
+      const folderId = await resolveFolderId(input.folder)
       const note = await createNote({
         title: input.title,
         body: input.body,
         category: input.category,
+        folderId,
       })
       return { note }
+    },
+  }),
+
+  create_folder: tool({
+    description:
+      "Create a folder to organise notes. Reuses an existing folder if one with the same name already exists (call list_folders first to avoid duplicates).",
+    inputSchema: z.object({
+      name: z.string().describe("The folder name."),
+    }),
+    execute: async (input): Promise<FolderResult> => {
+      const existing = (await listFolders()).find(
+        (f) => f.name.toLowerCase() === input.name.trim().toLowerCase()
+      )
+      const folder = existing ?? (await createFolder({ name: input.name }))
+      return { folder }
+    },
+  }),
+
+  list_folders: tool({
+    description:
+      "List the user's note folders. Use to find an existing folder (and its name) before creating one or filing a note.",
+    inputSchema: z.object({}),
+    execute: async (): Promise<FolderListResult> => {
+      const folders = await listFolders()
+      return { folders, count: folders.length }
     },
   }),
 

@@ -1,10 +1,13 @@
 "use client"
 
 import { format } from "date-fns"
+import { Folder as FolderIcon } from "lucide-react"
 
 import { TASK_STATUS_LABELS } from "@/lib/constants"
 import type {
   DocumentListResult,
+  FolderListResult,
+  FolderResult,
   NoteListResult,
   NoteResult,
   TaskListResult,
@@ -217,6 +220,31 @@ export function ToolResult({
       return <NoteCards notes={[(output as NoteResult).note]} />
     case "search_notes":
       return <NoteCards notes={(output as NoteListResult).notes} />
+    case "create_folder":
+      return (
+        <div className="flex items-center gap-2 text-sm">
+          <FolderIcon className="text-primary size-4" />
+          <span className="font-medium">
+            {(output as FolderResult).folder.name}
+          </span>
+        </div>
+      )
+    case "list_folders": {
+      const { folders } = output as FolderListResult
+      if (folders.length === 0) {
+        return <p className="text-muted-foreground text-xs">No folders yet.</p>
+      }
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          {folders.map((f) => (
+            <Badge key={f.id} variant="secondary" className="gap-1">
+              <FolderIcon className="size-3" />
+              {f.name}
+            </Badge>
+          ))}
+        </div>
+      )
+    }
     case "log_time":
       return (
         <TimeTable
