@@ -2,12 +2,15 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
+import { MailCheck } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/client"
-import { loginSchema, type LoginValues } from "@/lib/validation/auth"
+import {
+  forgotPasswordSchema,
+  type ForgotPasswordValues,
+} from "@/lib/validation/auth"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import {
@@ -28,35 +31,60 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 
-export function LoginForm() {
-  const router = useRouter()
+export function ForgotPasswordForm() {
   const [serverError, setServerError] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
 
-  const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+  const form = useForm<ForgotPasswordValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: "" },
   })
 
-  async function onSubmit(values: LoginValues) {
+  async function onSubmit(values: ForgotPasswordValues) {
     setServerError(null)
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword(values)
-
+    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+    })
     if (error) {
       setServerError(error.message)
       return
     }
+    setSent(true)
+  }
 
-    // Refresh so server components pick up the new session, then navigate.
-    router.refresh()
-    router.replace("/board")
+  if (sent) {
+    return (
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <div className="bg-primary/15 text-primary mb-1 flex size-10 items-center justify-center rounded-full">
+            <MailCheck className="size-5" />
+          </div>
+          <CardTitle className="text-xl">Check your email</CardTitle>
+          <CardDescription>
+            If an account exists for{" "}
+            <span className="text-foreground font-medium">
+              {form.getValues("email")}
+            </span>
+            , you&apos;ll get a link to reset your password.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <Button asChild variant="outline" className="w-full">
+            <Link href="/login">Back to sign in</Link>
+          </Button>
+        </CardFooter>
+      </Card>
+    )
   }
 
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle className="text-xl">AI Workspace</CardTitle>
-        <CardDescription>Sign in to your personal workspace.</CardDescription>
+        <CardTitle className="text-xl">Reset your password</CardTitle>
+        <CardDescription>
+          Enter your email and we&apos;ll send you a reset link.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -79,32 +107,6 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Password</FormLabel>
-                    <Link
-                      href="/forgot-password"
-                      className="text-muted-foreground hover:text-foreground text-xs underline-offset-4 hover:underline"
-                    >
-                      Forgot password?
-                    </Link>
-                  </div>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      autoComplete="current-password"
-                      placeholder="••••••••"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             {serverError ? (
               <p className="text-destructive text-sm">{serverError}</p>
@@ -118,25 +120,22 @@ export function LoginForm() {
               {form.formState.isSubmitting ? (
                 <>
                   <Spinner />
-                  Signing in…
+                  Sending…
                 </>
               ) : (
-                "Sign in"
+                "Send reset link"
               )}
             </Button>
           </form>
         </Form>
       </CardContent>
       <CardFooter className="justify-center">
-        <p className="text-muted-foreground text-sm">
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/signup"
-            className="text-foreground font-medium underline-offset-4 hover:underline"
-          >
-            Sign up
-          </Link>
-        </p>
+        <Link
+          href="/login"
+          className="text-muted-foreground hover:text-foreground text-sm underline-offset-4 hover:underline"
+        >
+          Back to sign in
+        </Link>
       </CardFooter>
     </Card>
   )

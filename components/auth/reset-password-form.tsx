@@ -1,20 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 
 import { createClient } from "@/lib/supabase/client"
-import { loginSchema, type LoginValues } from "@/lib/validation/auth"
+import {
+  resetPasswordSchema,
+  type ResetPasswordValues,
+} from "@/lib/validation/auth"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -28,26 +30,28 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 
-export function LoginForm() {
+export function ResetPasswordForm() {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
 
-  const form = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+  const form = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { password: "", confirmPassword: "" },
   })
 
-  async function onSubmit(values: LoginValues) {
+  async function onSubmit(values: ResetPasswordValues) {
     setServerError(null)
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword(values)
-
+    const { error } = await supabase.auth.updateUser({
+      password: values.password,
+    })
     if (error) {
-      setServerError(error.message)
+      setServerError(
+        `${error.message}. If your reset link expired, request a new one.`
+      )
       return
     }
-
-    // Refresh so server components pick up the new session, then navigate.
+    toast.success("Password updated")
     router.refresh()
     router.replace("/board")
   }
@@ -55,23 +59,25 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle className="text-xl">AI Workspace</CardTitle>
-        <CardDescription>Sign in to your personal workspace.</CardDescription>
+        <CardTitle className="text-xl">Set a new password</CardTitle>
+        <CardDescription>
+          Choose a new password for your account.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
             <FormField
               control={form.control}
-              name="email"
+              name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>New password</FormLabel>
                   <FormControl>
                     <Input
-                      type="email"
-                      autoComplete="email"
-                      placeholder="you@example.com"
+                      type="password"
+                      autoComplete="new-password"
+                      placeholder="At least 8 characters"
                       {...field}
                     />
                   </FormControl>
@@ -81,22 +87,14 @@ export function LoginForm() {
             />
             <FormField
               control={form.control}
-              name="password"
+              name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-center justify-between">
-                    <FormLabel>Password</FormLabel>
-                    <Link
-                      href="/forgot-password"
-                      className="text-muted-foreground hover:text-foreground text-xs underline-offset-4 hover:underline"
-                    >
-                      Forgot password?
-                    </Link>
-                  </div>
+                  <FormLabel>Confirm password</FormLabel>
                   <FormControl>
                     <Input
                       type="password"
-                      autoComplete="current-password"
+                      autoComplete="new-password"
                       placeholder="••••••••"
                       {...field}
                     />
@@ -118,26 +116,15 @@ export function LoginForm() {
               {form.formState.isSubmitting ? (
                 <>
                   <Spinner />
-                  Signing in…
+                  Updating…
                 </>
               ) : (
-                "Sign in"
+                "Update password"
               )}
             </Button>
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-muted-foreground text-sm">
-          Don&apos;t have an account?{" "}
-          <Link
-            href="/signup"
-            className="text-foreground font-medium underline-offset-4 hover:underline"
-          >
-            Sign up
-          </Link>
-        </p>
-      </CardFooter>
     </Card>
   )
 }

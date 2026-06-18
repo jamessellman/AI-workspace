@@ -4,7 +4,17 @@ import { NextResponse, type NextRequest } from "next/server"
 import type { Database } from "@/types/database"
 
 /** Routes reachable without an authenticated session. */
-const PUBLIC_PATHS = ["/login", "/auth"]
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/auth",
+]
+
+/** Auth pages a signed-in user shouldn't sit on (reset-password is excluded —
+ * it's reached via a recovery session). */
+const REDIRECT_WHEN_AUTHED = ["/login", "/signup", "/forgot-password"]
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -55,8 +65,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Authenticated users hitting the login page go to the board.
-  if (user && pathname === "/login") {
+  // Authenticated users hitting login/signup/forgot go to the board.
+  if (user && REDIRECT_WHEN_AUTHED.includes(pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = "/board"
     return NextResponse.redirect(url)
