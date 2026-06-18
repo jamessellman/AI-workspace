@@ -1,6 +1,22 @@
 import "server-only"
 
+import { cache } from "react"
+
 import { createClient } from "@/lib/supabase/server"
+
+/**
+ * Validate the session against the auth server. Wrapped in React `cache()` so
+ * multiple reads in a single request/render (e.g. the Documents page loads
+ * documents + tasks) share one network round-trip instead of calling getUser()
+ * repeatedly.
+ */
+const resolveUser = cache(async () => {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  return user
+})
 
 /**
  * Resolve the authenticated user, throwing if there is no session. Returns the
@@ -9,9 +25,7 @@ import { createClient } from "@/lib/supabase/server"
  */
 export async function requireUser() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await resolveUser()
 
   if (!user) {
     throw new Error("Not authenticated")
