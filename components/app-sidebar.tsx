@@ -2,18 +2,12 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  Clock,
-  FileText,
-  KanbanSquare,
-  MessageSquare,
-  StickyNote,
-} from "lucide-react"
+import { Clock, FileText, KanbanSquare, StickyNote } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { SidebarChat } from "@/components/chat/sidebar-chat"
 import {
   Sidebar,
-  SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -28,7 +22,6 @@ const NAV_ITEMS = [
   { title: "Notes", href: "/notes", icon: StickyNote },
   { title: "Timesheets", href: "/timesheets", icon: Clock },
   { title: "Documents", href: "/documents", icon: FileText },
-  { title: "Chat", href: "/chat", icon: MessageSquare },
 ] as const
 
 export function AppSidebar() {
@@ -52,47 +45,51 @@ export function AppSidebar() {
           </span>
         </div>
       </SidebarHeader>
-      <SidebarContent className="pt-2">
-        <SidebarGroup className="gap-1">
-          <SidebarGroupLabel className="mb-1">Workspace</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-2">
-              {NAV_ITEMS.map((item) => {
-                const isActive =
-                  pathname === item.href || pathname.startsWith(`${item.href}/`)
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      className={cn(
-                        // Taller rows for more vertical breathing room.
-                        "h-10",
-                        // Animated left accent bar + slide-in on hover/active.
-                        "relative overflow-hidden transition-[transform,background-color,color,box-shadow] duration-200 ease-out hover:translate-x-1",
-                        "before:bg-primary before:absolute before:top-1/2 before:left-0 before:h-0 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:transition-all before:duration-300 before:content-['']",
-                        "hover:before:h-4",
-                        isActive &&
-                          "before:h-5 shadow-[0_0_24px_-12px_var(--primary)]"
-                      )}
-                    >
-                      <Link href={item.href}>
-                        <item.icon
-                          className={cn(
-                            "transition-transform duration-200 group-hover/menu-button:scale-115",
-                            isActive && "text-primary"
-                          )}
-                        />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+
+      <SidebarGroup className="gap-1 pt-2">
+        <SidebarGroupLabel className="mb-1">Workspace</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu className="gap-2">
+            {NAV_ITEMS.map((item) => {
+              const isActive =
+                pathname === item.href || pathname.startsWith(`${item.href}/`)
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive}
+                    className={cn(
+                      // Taller rows for more vertical breathing room.
+                      "h-10",
+                      // Animated left accent bar + slide-in on hover/active.
+                      "relative overflow-hidden transition-[transform,background-color,color,box-shadow] duration-200 ease-out hover:translate-x-1",
+                      "before:bg-primary before:absolute before:top-1/2 before:left-0 before:h-0 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:transition-all before:duration-300 before:content-['']",
+                      "hover:before:h-4",
+                      isActive &&
+                        "before:h-5 shadow-[0_0_24px_-12px_var(--primary)]"
+                    )}
+                  >
+                    <Link href={item.href}>
+                      <item.icon
+                        className={cn(
+                          "transition-transform duration-200 group-hover/menu-button:scale-115",
+                          isActive && "text-primary"
+                        )}
+                      />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      {/* Persistent assistant — docked here so it's reachable from any page. */}
+      <div className="border-sidebar-border mt-1 flex min-h-0 flex-1 flex-col border-t pt-2">
+        <SidebarChat />
+      </div>
     </Sidebar>
   )
 }

@@ -36,7 +36,9 @@ export default async function AppLayout({
   const initial = email.charAt(0).toUpperCase()
 
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      style={{ "--sidebar-width": "22rem" } as React.CSSProperties}
+    >
       <AppSidebar />
       <SidebarInset>
         <header className="bg-background sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b px-4">
