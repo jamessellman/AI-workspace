@@ -16,6 +16,10 @@ const PUBLIC_PATHS = [
  * it's reached via a recovery session). */
 const REDIRECT_WHEN_AUTHED = ["/login", "/signup", "/forgot-password"]
 
+/** Header used to forward the verified user id to server components/actions so
+ * they can skip a second getUser() round-trip this request. */
+export const USER_ID_HEADER = "x-user-id"
+
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
@@ -26,9 +30,19 @@ function isPublicPath(pathname: string) {
  * Refreshes the Supabase session on every request and redirects
  * unauthenticated users to /login. Must run in middleware so the refreshed
  * auth cookies are written back to the response.
+ *
+ * Also forwards the verified user id downstream via a request header, letting
+ * server components/actions reuse it instead of re-validating with the auth
+ * server. The header is stripped from the incoming request first so a client
+ * can't spoof it (and RLS is the real enforcement at the database regardless).
  */
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.delete(USER_ID_HEADER)
+
+  let supabaseResponse = NextResponse.next({
+    request: { headers: requestHeaders },
+  })
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,7 +56,9 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
-          supabaseResponse = NextResponse.next({ request })
+          supabaseResponse = NextResponse.next({
+            request: { headers: requestHeaders },
+          })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -70,6 +86,16 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = "/board"
     return NextResponse.redirect(url)
+  }
+
+  // Forward the verified id, preserving any cookies refreshed above.
+  if (user) {
+    requestHeaders.set(USER_ID_HEADER, user.id)
+    const refreshed = supabaseResponse.cookies.getAll()
+    supabaseResponse = NextResponse.next({
+      request: { headers: requestHeaders },
+    })
+    refreshed.forEach((cookie) => supabaseResponse.cookies.set(cookie))
   }
 
   return supabaseResponse

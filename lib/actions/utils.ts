@@ -1,8 +1,10 @@
 import "server-only"
 
 import { cache } from "react"
+import { headers } from "next/headers"
 
 import { createClient } from "@/lib/supabase/server"
+import { USER_ID_HEADER } from "@/lib/supabase/middleware"
 
 /**
  * Validate the session against the auth server. Wrapped in React `cache()` so
@@ -25,8 +27,17 @@ const resolveUser = cache(async () => {
  */
 export async function requireUser() {
   const supabase = await createClient()
-  const user = await resolveUser()
 
+  // Fast path: the middleware already validated the session this request and
+  // forwarded the verified user id, so we can skip a second auth round-trip.
+  // RLS still enforces ownership at the database on every query.
+  const headerUserId = (await headers()).get(USER_ID_HEADER)
+  if (headerUserId) {
+    return { supabase, userId: headerUserId }
+  }
+
+  // Fallback (e.g. requests that didn't pass through middleware): validate.
+  const user = await resolveUser()
   if (!user) {
     throw new Error("Not authenticated")
   }
