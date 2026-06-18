@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
 import {
+  Download,
   Folder as FolderIcon,
   FolderInput,
   FolderPlus,
@@ -19,6 +20,11 @@ import { toast } from "sonner"
 
 import { createFolder, deleteFolder, renameFolder } from "@/lib/actions/folders"
 import { deleteNote, listNotes, moveNoteToFolder } from "@/lib/actions/notes"
+import {
+  exportNoteDoc,
+  exportNoteMarkdown,
+  exportNotePdf,
+} from "@/lib/notes/export"
 import type { Folder, Note } from "@/types/database"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -381,6 +387,31 @@ export function NotesView({
                               {f.name}
                             </DropdownMenuItem>
                           ))}
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <Download className="text-muted-foreground" />
+                          Export
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuItem
+                            onSelect={() => {
+                              if (!exportNotePdf(note)) {
+                                toast.error("Allow pop-ups to export as PDF")
+                              }
+                            }}
+                          >
+                            PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => exportNoteDoc(note)}>
+                            Word / Google Docs (.doc)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={() => exportNoteMarkdown(note)}
+                          >
+                            Markdown (.md)
+                          </DropdownMenuItem>
                         </DropdownMenuSubContent>
                       </DropdownMenuSub>
                       <DropdownMenuSeparator />
