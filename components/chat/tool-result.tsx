@@ -1,11 +1,13 @@
 "use client"
 
 import { format } from "date-fns"
-import { Folder as FolderIcon } from "lucide-react"
+import { CalendarClock, Folder as FolderIcon } from "lucide-react"
 
 import { TASK_STATUS_LABELS } from "@/lib/constants"
 import type {
   DocumentListResult,
+  EventListResult,
+  EventResult,
   FolderListResult,
   FolderResult,
   NoteListResult,
@@ -197,6 +199,46 @@ function DocsTable({ documents }: { documents: DocumentListResult["documents"] }
   )
 }
 
+function fmtWhen(iso: string, allDay: boolean): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return allDay ? format(d, "EEE d MMM") : format(d, "EEE d MMM, h:mmaaa")
+}
+
+function EventCard({
+  title,
+  startISO,
+  allDay,
+  recurrence,
+  location,
+}: {
+  title: string
+  startISO: string
+  allDay: boolean
+  recurrence: string
+  location: string | null
+}) {
+  return (
+    <Card className="gap-2">
+      <CardHeader>
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-sm break-words">{title}</CardTitle>
+          {recurrence !== "none" ? (
+            <Badge variant="secondary">{recurrence}</Badge>
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent className="text-muted-foreground space-y-1 text-xs">
+        <p className="flex items-center gap-1">
+          <CalendarClock className="size-3" />
+          {fmtWhen(startISO, allDay)}
+        </p>
+        {location ? <p>{location}</p> : null}
+      </CardContent>
+    </Card>
+  )
+}
+
 /**
  * Renders a completed tool's output as structured UI. `output` is `unknown`
  * because the AI SDK doesn't statically link a UI message part to its tool's
@@ -258,6 +300,45 @@ export function ToolResult({
       )
     case "list_time":
       return <TimeTable result={output as TimeListResult} />
+    case "create_event":
+    case "update_event": {
+      const { event } = output as EventResult
+      return (
+        <EventCard
+          title={event.title}
+          startISO={event.starts_at}
+          allDay={event.all_day}
+          recurrence={event.recurrence}
+          location={event.location}
+        />
+      )
+    }
+    case "list_events": {
+      const { events } = output as EventListResult
+      if (events.length === 0) {
+        return (
+          <p className="text-muted-foreground text-xs">
+            No events in that range.
+          </p>
+        )
+      }
+      return (
+        <div className="space-y-1.5">
+          {events.slice(0, 12).map((e) => (
+            <div
+              key={`${e.id}-${e.occurrence_start}`}
+              className="flex items-center gap-2 text-xs"
+            >
+              <CalendarClock className="text-primary size-3.5 shrink-0" />
+              <span className="font-medium">{e.title}</span>
+              <span className="text-muted-foreground">
+                {fmtWhen(e.occurrence_start, e.all_day)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )
+    }
     case "search_documents":
       return <DocsTable documents={(output as DocumentListResult).documents} />
     case "summarise_document": {

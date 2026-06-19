@@ -1,10 +1,17 @@
 import type {
+  CalendarEvent,
   DocumentRow,
   Folder,
   Note,
   Task,
   Timesheet,
 } from "@/types/database"
+
+/** An event row plus its concrete occurrence start/end (recurring → many). */
+export type CalendarOccurrence = CalendarEvent & {
+  occurrence_start: string
+  occurrence_end: string | null
+}
 
 /**
  * Result shapes returned by the AI tools in `lib/ai/tools.ts`.
@@ -61,6 +68,15 @@ export interface FolderListResult {
   count: number
 }
 
+export interface EventResult {
+  event: CalendarEvent
+}
+
+export interface EventListResult {
+  events: CalendarOccurrence[]
+  count: number
+}
+
 /** Names of every tool the model can call. Keep in sync with `tools.ts`. */
 export type ToolName =
   | "create_task"
@@ -72,6 +88,10 @@ export type ToolName =
   | "list_notes"
   | "create_folder"
   | "list_folders"
+  | "create_event"
+  | "list_events"
+  | "update_event"
+  | "delete_event"
   | "log_time"
   | "list_time"
   | "search_documents"

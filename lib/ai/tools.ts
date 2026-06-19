@@ -9,6 +9,12 @@ import {
   searchDocuments,
   updateDocument,
 } from "@/lib/actions/documents"
+import {
+  createEvent,
+  deleteEvent,
+  listEvents,
+  updateEvent,
+} from "@/lib/actions/events"
 import { createFolder, listFolders } from "@/lib/actions/folders"
 import { createNote, listNotes, searchNotes } from "@/lib/actions/notes"
 import { createTask, listTasks, moveTask, updateTask } from "@/lib/actions/tasks"
@@ -17,6 +23,8 @@ import { chatModel } from "@/lib/ai/provider"
 import type {
   DocumentListResult,
   DocumentSummaryResult,
+  EventListResult,
+  EventResult,
   FolderListResult,
   FolderResult,
   NoteListResult,
@@ -35,6 +43,7 @@ import type {
  */
 
 const STATUS = z.enum(["backlog", "todo", "in_progress", "complete"])
+const RECUR = z.enum(["none", "daily", "weekly", "monthly", "yearly"])
 const ISO_DATE = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
@@ -197,6 +206,81 @@ export const tools = {
     execute: async (): Promise<FolderListResult> => {
       const folders = await listFolders()
       return { folders, count: folders.length }
+    },
+  }),
+
+  create_event: tool({
+    description:
+      "Add an event to the calendar. Resolve relative dates/times (e.g. 'Friday 2pm', 'tomorrow morning') to ISO 8601 datetimes using the current date in the system prompt. For repeating events set recurrence (daily/weekly/monthly/yearly) and optionally recurrenceUntil.",
+    inputSchema: z.object({
+      title: z.string(),
+      description: z.string().optional(),
+      location: z.string().optional(),
+      allDay: z.boolean().optional().describe("True for all-day events."),
+      startsAt: z
+        .string()
+        .describe("ISO 8601 start, e.g. 2026-06-20T14:00:00."),
+      endsAt: z.string().optional().describe("ISO 8601 end."),
+      recurrence: RECUR.optional(),
+      recurrenceUntil: ISO_DATE.optional().describe(
+        "YYYY-MM-DD the repeat stops on."
+      ),
+    }),
+    execute: async (input): Promise<EventResult> => {
+      const event = await createEvent({
+        title: input.title,
+        description: input.description ?? null,
+        location: input.location ?? null,
+        allDay: input.allDay,
+        startsAt: input.startsAt,
+        endsAt: input.endsAt ?? null,
+        recurrence: input.recurrence,
+        recurrenceUntil: input.recurrenceUntil ?? null,
+      })
+      return { event }
+    },
+  }),
+
+  list_events: tool({
+    description:
+      "List calendar event occurrences in a date range. Use to see what's scheduled, or to find an event's id before updating or deleting it. Provide ISO datetimes for from/to.",
+    inputSchema: z.object({
+      from: z.string().describe("ISO start of range."),
+      to: z.string().describe("ISO end of range."),
+    }),
+    execute: async (input): Promise<EventListResult> => {
+      const events = await listEvents({ from: input.from, to: input.to })
+      return { events, count: events.length }
+    },
+  }),
+
+  update_event: tool({
+    description:
+      "Update or reschedule an event by id (find it with list_events first). Editing a recurring event changes the whole series.",
+    inputSchema: z.object({
+      id: z.string().uuid(),
+      title: z.string().optional(),
+      description: z.string().nullable().optional(),
+      location: z.string().nullable().optional(),
+      allDay: z.boolean().optional(),
+      startsAt: z.string().optional(),
+      endsAt: z.string().nullable().optional(),
+      recurrence: RECUR.optional(),
+      recurrenceUntil: ISO_DATE.nullable().optional(),
+    }),
+    execute: async (input): Promise<EventResult> => {
+      const event = await updateEvent(input)
+      return { event }
+    },
+  }),
+
+  delete_event: tool({
+    description:
+      "Delete an event by id (removes the whole series for recurring events). Find the id with list_events first.",
+    inputSchema: z.object({ id: z.string().uuid() }),
+    execute: async (input): Promise<{ id: string }> => {
+      await deleteEvent(input.id)
+      return { id: input.id }
     },
   }),
 

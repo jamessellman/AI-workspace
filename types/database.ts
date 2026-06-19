@@ -7,6 +7,8 @@
 
 export type TaskStatus = "backlog" | "todo" | "in_progress" | "complete"
 
+export type Recurrence = "none" | "daily" | "weekly" | "monthly" | "yearly"
+
 export interface Database {
   public: {
     Tables: {
@@ -80,6 +82,38 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["folders"]["Insert"]>
         Relationships: []
       }
+      events: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          description: string | null
+          location: string | null
+          all_day: boolean
+          starts_at: string
+          ends_at: string | null
+          recurrence: Recurrence
+          recurrence_until: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          description?: string | null
+          location?: string | null
+          all_day?: boolean
+          starts_at: string
+          ends_at?: string | null
+          recurrence?: Recurrence
+          recurrence_until?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["events"]["Insert"]>
+        Relationships: []
+      }
       timesheets: {
         Row: {
           id: string
@@ -146,5 +180,6 @@ export interface Database {
 export type Task = Database["public"]["Tables"]["tasks"]["Row"]
 export type Note = Database["public"]["Tables"]["notes"]["Row"]
 export type Folder = Database["public"]["Tables"]["folders"]["Row"]
+export type CalendarEvent = Database["public"]["Tables"]["events"]["Row"]
 export type Timesheet = Database["public"]["Tables"]["timesheets"]["Row"]
 export type DocumentRow = Database["public"]["Tables"]["documents"]["Row"]

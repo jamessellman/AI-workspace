@@ -2,7 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Clock, FileText, KanbanSquare, StickyNote } from "lucide-react"
+import {
+  CalendarDays,
+  Clock,
+  FileText,
+  KanbanSquare,
+  StickyNote,
+} from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { SidebarChat } from "@/components/chat/sidebar-chat"
@@ -20,6 +26,7 @@ import {
 const NAV_ITEMS = [
   { title: "Board", href: "/board", icon: KanbanSquare },
   { title: "Notes", href: "/notes", icon: StickyNote },
+  { title: "Calendar", href: "/calendar", icon: CalendarDays },
   { title: "Timesheets", href: "/timesheets", icon: Clock },
   { title: "Documents", href: "/documents", icon: FileText },
 ] as const

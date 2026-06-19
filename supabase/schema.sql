@@ -301,3 +301,45 @@ create policy "folders_update_own" on public.folders
 drop policy if exists "folders_delete_own" on public.folders;
 create policy "folders_delete_own" on public.folders
   for delete using (user_id = auth.uid());
+
+-- ===========================================================================
+-- events  (calendar; recurrence expanded server-side per query range)
+-- ===========================================================================
+create table if not exists public.events (
+  id               uuid primary key default gen_random_uuid(),
+  user_id          uuid not null references auth.users (id) on delete cascade,
+  title            text not null,
+  description      text,
+  location         text,
+  all_day          boolean not null default false,
+  starts_at        timestamptz not null,
+  ends_at          timestamptz,
+  recurrence       text not null default 'none'
+                   check (recurrence in ('none','daily','weekly','monthly','yearly')),
+  recurrence_until date,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+
+create index if not exists events_user_id_idx on public.events (user_id);
+create index if not exists events_user_starts_idx on public.events (user_id, starts_at);
+
+drop trigger if exists events_set_updated_at on public.events;
+create trigger events_set_updated_at
+  before update on public.events
+  for each row execute function public.set_updated_at();
+
+alter table public.events enable row level security;
+
+drop policy if exists "events_select_own" on public.events;
+create policy "events_select_own" on public.events
+  for select using (user_id = auth.uid());
+drop policy if exists "events_insert_own" on public.events;
+create policy "events_insert_own" on public.events
+  for insert with check (user_id = auth.uid());
+drop policy if exists "events_update_own" on public.events;
+create policy "events_update_own" on public.events
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "events_delete_own" on public.events;
+create policy "events_delete_own" on public.events
+  for delete using (user_id = auth.uid());
