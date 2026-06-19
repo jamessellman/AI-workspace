@@ -1,7 +1,9 @@
 import {
   addDays,
+  endOfDay,
   endOfMonth,
   endOfWeek,
+  startOfDay,
   startOfMonth,
   startOfWeek,
   subDays,
@@ -10,33 +12,48 @@ import {
 import { listEvents } from "@/lib/actions/events"
 import { listTasks } from "@/lib/actions/tasks"
 import { PageHeader } from "@/components/page-header"
-import { CalendarView } from "@/components/calendar/calendar-view"
+import { CalendarView, type CalendarViewMode } from "@/components/calendar/calendar-view"
 
 export const dynamic = "force-dynamic"
 
-function parseMonth(month?: string) {
+function parseView(view?: string): CalendarViewMode {
+  return view === "week" || view === "day" ? view : "month"
+}
+
+function parseDate(date?: string, month?: string): Date {
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, m, d] = date.split("-").map(Number)
+    return new Date(y, m - 1, d)
+  }
   if (month && /^\d{4}-\d{2}$/.test(month)) {
     const [y, m] = month.split("-").map(Number)
-    return { year: y, monthIndex: m - 1, str: month }
+    return new Date(y, m - 1, 1)
   }
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = now.getMonth()
-  return { year: y, monthIndex: m, str: `${y}-${String(m + 1).padStart(2, "0")}` }
+  return new Date()
 }
 
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>
+  searchParams: Promise<{ view?: string; date?: string; month?: string }>
 }) {
-  const { month } = await searchParams
-  const { year, monthIndex, str } = parseMonth(month)
+  const sp = await searchParams
+  const view = parseView(sp.view)
+  const focus = parseDate(sp.date, sp.month)
 
-  // Fetch a padded range around the visible month grid (covers timezone edges).
-  const first = new Date(year, monthIndex, 1)
-  const from = subDays(startOfWeek(startOfMonth(first)), 2)
-  const to = addDays(endOfWeek(endOfMonth(first)), 2)
+  // Fetch range for the active view (padded to cover timezone edges).
+  let from: Date
+  let to: Date
+  if (view === "day") {
+    from = subDays(startOfDay(focus), 1)
+    to = addDays(endOfDay(focus), 1)
+  } else if (view === "week") {
+    from = subDays(startOfWeek(focus), 1)
+    to = addDays(endOfWeek(focus), 1)
+  } else {
+    from = subDays(startOfWeek(startOfMonth(focus)), 2)
+    to = addDays(endOfWeek(endOfMonth(focus)), 2)
+  }
 
   const [events, tasks] = await Promise.all([
     listEvents({ from: from.toISOString(), to: to.toISOString() }),
@@ -52,13 +69,20 @@ export default async function CalendarPage({
       status: t.status,
     }))
 
+  const dateStr = `${focus.getFullYear()}-${String(focus.getMonth() + 1).padStart(2, "0")}-${String(focus.getDate()).padStart(2, "0")}`
+
   return (
     <div>
       <PageHeader
         title="Calendar"
         description="Your events and task deadlines. Ask the assistant to add or move events for you."
       />
-      <CalendarView month={str} events={events} tasks={calendarTasks} />
+      <CalendarView
+        view={view}
+        date={dateStr}
+        events={events}
+        tasks={calendarTasks}
+      />
     </div>
   )
 }
