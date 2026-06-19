@@ -53,6 +53,31 @@ const ISO_DATE = z
 const TEXTUAL_MIME = /^(text\/|application\/(json|xml|x-yaml|yaml))/i
 const MAX_SUMMARY_INPUT = 24_000
 
+// The model (especially smaller ones) tends to invent due dates the user never
+// asked for. As a hard guard, we only honour a model-supplied due date when the
+// user's latest message actually references a date.
+const DATE_SIGNAL =
+  /\b(today|tonight|tomorrow|yesterday|due|deadline)\b|\b(mon|tue|tues|wed|weds|thu|thur|thurs|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b|\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)\b|\b(next|this)\s+(week|month|year|weekend|mon|tue|tues|wed|weds|thu|thur|thurs|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b|\bin\s+\d+\s+(day|days|week|weeks|month|months)\b|\d{1,2}[/.\-]\d{1,2}|\b\d{1,2}(st|nd|rd|th)\b|\b\d{4}-\d{2}-\d{2}\b/i
+
+function userMentionedDate(messages: unknown): boolean {
+  if (!Array.isArray(messages)) return false
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const m = messages[i] as { role?: string; content?: unknown }
+    if (m?.role !== "user") continue
+    let text = ""
+    if (typeof m.content === "string") text = m.content
+    else if (Array.isArray(m.content)) {
+      text = m.content
+        .map((p) =>
+          p && typeof p === "object" && "text" in p ? String(p.text) : ""
+        )
+        .join(" ")
+    }
+    return DATE_SIGNAL.test(text)
+  }
+  return false
+}
+
 /** Resolve a folder name to an id, reusing an existing folder (case-insensitive)
  * or creating one. Returns null when no folder name is given. */
 async function resolveFolderId(name: string | undefined): Promise<string | null> {
@@ -69,22 +94,29 @@ async function resolveFolderId(name: string | undefined): Promise<string | null>
 export const tools = {
   create_task: tool({
     description:
-      "Create a task on the board. Resolve relative dates (e.g. 'Friday', 'tomorrow') to an absolute YYYY-MM-DD using the current date given in the system prompt. Defaults to the Backlog column unless a status is specified.",
+      "Create a task on the board. Set ONLY the fields the user explicitly stated; omit everything else. Do not add a description or a due date the user didn't mention.",
     inputSchema: z.object({
       title: z.string().describe("Short, imperative task title."),
       description: z
         .string()
         .optional()
-        .describe("Optional longer detail for the task."),
+        .describe(
+          "Only if the user gave detail beyond the title. Omit otherwise."
+        ),
       status: STATUS.optional().describe("Board column. Defaults to backlog."),
-      dueDate: ISO_DATE.optional().describe("Due date as YYYY-MM-DD."),
+      dueDate: ISO_DATE.optional().describe(
+        "OMIT unless the user explicitly stated a due date. NEVER default to today or guess a date. If the user gave a relative date (e.g. 'Friday', 'tomorrow'), resolve it to YYYY-MM-DD using the system-prompt date."
+      ),
     }),
-    execute: async (input): Promise<TaskResult> => {
+    execute: async (input, { messages }): Promise<TaskResult> => {
+      // Only keep a due date if the user actually referenced one.
+      const dueDate =
+        input.dueDate && userMentionedDate(messages) ? input.dueDate : null
       const task = await createTask({
         title: input.title,
         description: input.description ?? null,
         status: input.status,
-        dueDate: input.dueDate ?? null,
+        dueDate,
       })
       return { task }
     },
@@ -100,13 +132,15 @@ export const tools = {
       status: STATUS.optional(),
       dueDate: ISO_DATE.nullable().optional(),
     }),
-    execute: async (input): Promise<TaskResult> => {
+    execute: async (input, { messages }): Promise<TaskResult> => {
+      // Don't change the due date unless the user's message referenced a date.
+      const dueDate = userMentionedDate(messages) ? input.dueDate : undefined
       const task = await updateTask({
         id: input.id,
         title: input.title,
         description: input.description,
         status: input.status,
-        dueDate: input.dueDate,
+        dueDate,
       })
       return { task }
     },
