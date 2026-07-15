@@ -60,6 +60,7 @@ export function NewsView({
   const [readerItem, setReaderItem] = useState<FeedItemPreview | null>(null)
   const [readerOpen, setReaderOpen] = useState(false)
   const [clearOpen, setClearOpen] = useState(false)
+  const [pendingDeleteFeed, setPendingDeleteFeed] = useState<Feed | null>(null)
   const [refreshing, startRefresh] = useTransition()
   const autoRan = useRef(false)
 
@@ -163,6 +164,13 @@ export function NewsView({
     })
   }
 
+  function confirmDeleteFeed() {
+    if (!pendingDeleteFeed) return
+    const feed = pendingDeleteFeed
+    setPendingDeleteFeed(null)
+    onDeleteFeed(feed)
+  }
+
   function onDeleteFeed(feed: Feed) {
     setFeeds((prev) => prev.filter((f) => f.id !== feed.id))
     setItems((prev) => prev.filter((i) => i.feed_id !== feed.id))
@@ -216,7 +224,7 @@ export function NewsView({
               label={f.title || f.url}
               count={unreadByFeed.map.get(f.id) ?? 0}
               onClick={() => setSelected(f.id)}
-              onDelete={() => onDeleteFeed(f)}
+              onDelete={() => setPendingDeleteFeed(f)}
             />
           ))}
         </div>
@@ -351,6 +359,29 @@ export function NewsView({
             </Button>
             <Button variant="destructive" onClick={onClearAll}>
               Clear all
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(pendingDeleteFeed)}
+        onOpenChange={(o) => !o && setPendingDeleteFeed(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove feed?</DialogTitle>
+            <DialogDescription>
+              Remove “{pendingDeleteFeed?.title || pendingDeleteFeed?.url}” and
+              its articles? You can add it again anytime.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDeleteFeed(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteFeed}>
+              Remove feed
             </Button>
           </DialogFooter>
         </DialogContent>

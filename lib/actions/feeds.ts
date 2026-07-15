@@ -20,9 +20,9 @@ const REFRESH_THROTTLE_MS = 15 * 60 * 1000
 const FETCH_TIMEOUT_MS = 10_000
 const MAX_ITEMS_PER_FEED = 60
 const MAX_CONTENT_CHARS = 200_000
-// For a brand-new feed (never fetched), only import the last week so its full
-// back-catalogue doesn't flood the reader.
-const NEW_FEED_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+// Only import items published within this rolling window, so a feed's full
+// back-catalogue never floods the reader — you always get the recent stuff.
+const IMPORT_WINDOW_MS = 5 * 24 * 60 * 60 * 1000
 
 /** Strip HTML and collapse whitespace for a short article preview. */
 function cleanSummary(html: string): string {
@@ -86,15 +86,13 @@ async function fetchAndStore(
     .eq("feed_id", feed.id)
   const have = new Set((existing ?? []).map((r) => r.guid))
 
-  // Only import items published after our cutoff (last fetch, or the last week
-  // for a brand-new feed) so back-catalogues don't flood the reader.
-  const sinceMs = feed.last_fetched_at
-    ? new Date(feed.last_fetched_at).getTime()
-    : Date.now() - NEW_FEED_WINDOW_MS
+  // Import only items published within the rolling window (and not already
+  // stored). Keeps the reader to recent articles without flooding.
+  const cutoffMs = Date.now() - IMPORT_WINDOW_MS
   const fresh = items.filter((i) => {
     if (!i.guid || have.has(i.guid)) return false
     if (!i.published_at) return true // undated: import once (dedup handles repeats)
-    return new Date(i.published_at).getTime() > sinceMs
+    return new Date(i.published_at).getTime() >= cutoffMs
   })
 
   if (fresh.length > 0) {
@@ -222,8 +220,9 @@ export async function refreshFeeds(force = false): Promise<{ newItems: number }>
   return { newItems: results.reduce((a, b) => a + b, 0) }
 }
 
-/** Clear every stored article and set feeds' cutoff to now, so a refresh only
- * pulls genuinely new items from here on (a clean "start fresh"). */
+/** Clear every stored article. Feeds' fetch marker is reset so the next refresh
+ * re-pulls the recent window (a clean slate, then the last few days come back —
+ * never the whole backlog). */
 export async function clearAllItems(): Promise<void> {
   const { supabase, userId } = await requireUser()
   const { error: delErr } = await supabase
@@ -233,7 +232,7 @@ export async function clearAllItems(): Promise<void> {
   if (delErr) throw new Error(delErr.message)
   const { error: updErr } = await supabase
     .from("feeds")
-    .update({ last_fetched_at: new Date().toISOString() })
+    .update({ last_fetched_at: null })
     .eq("user_id", userId)
   if (updErr) throw new Error(updErr.message)
   revalidatePath("/news")
