@@ -49,7 +49,7 @@ export function LoginForm() {
 
     // Refresh so server components pick up the new session, then navigate.
     router.refresh()
-    router.replace("/board")
+    router.replace("/news")
   }
 
   return (

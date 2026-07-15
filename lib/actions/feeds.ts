@@ -1,0 +1,207 @@
+"use server"
+
+import { revalidatePath } from "next/cache"
+import Parser from "rss-parser"
+
+import { requireUser } from "@/lib/actions/utils"
+import {
+  addFeedSchema,
+  listItemsSchema,
+  type ListItemsInput,
+} from "@/lib/validation/feed"
+import type { Feed, FeedItem } from "@/types/database"
+
+type SupabaseServerClient = Awaited<ReturnType<typeof requireUser>>["supabase"]
+
+const parser = new Parser()
+const REFRESH_THROTTLE_MS = 15 * 60 * 1000
+const FETCH_TIMEOUT_MS = 10_000
+const MAX_ITEMS_PER_FEED = 60
+
+/** Strip HTML and collapse whitespace for a short article preview. */
+function cleanSummary(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 600)
+}
+
+function toIso(value?: string): string | null {
+  if (!value) return null
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+/** Fetch + parse a feed and store any new items. Returns the count of new items. */
+async function fetchAndStore(
+  supabase: SupabaseServerClient,
+  userId: string,
+  feed: Feed
+): Promise<number> {
+  const res = await fetch(feed.url, {
+    headers: {
+      "User-Agent": "AI-Workspace RSS Reader",
+      Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
+    },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  })
+  if (!res.ok) throw new Error(`Feed returned ${res.status}`)
+  const xml = await res.text()
+  const parsed = await parser.parseString(xml)
+
+  const title = parsed.title?.trim() || feed.title || feed.url
+  const siteUrl = parsed.link ?? null
+
+  const items = (parsed.items ?? []).slice(0, MAX_ITEMS_PER_FEED).map((it) => {
+    const guid = String(it.guid || it.link || it.id || it.title || "").slice(0, 500)
+    return {
+      guid,
+      title: (it.title || "Untitled").toString().slice(0, 500),
+      url: it.link ?? null,
+      author: (it.creator || it.author || null) as string | null,
+      summary: cleanSummary(
+        (it.contentSnippet || it.summary || it.content || "") as string
+      ),
+      published_at: toIso(it.isoDate || it.pubDate),
+    }
+  })
+
+  const { data: existing } = await supabase
+    .from("feed_items")
+    .select("guid")
+    .eq("feed_id", feed.id)
+  const have = new Set((existing ?? []).map((r) => r.guid))
+  const fresh = items.filter((i) => i.guid && !have.has(i.guid))
+
+  if (fresh.length > 0) {
+    const { error } = await supabase
+      .from("feed_items")
+      .insert(fresh.map((i) => ({ ...i, user_id: userId, feed_id: feed.id })))
+    if (error) throw new Error(error.message)
+  }
+
+  await supabase
+    .from("feeds")
+    .update({
+      title,
+      site_url: siteUrl,
+      last_fetched_at: new Date().toISOString(),
+    })
+    .eq("id", feed.id)
+
+  return fresh.length
+}
+
+export async function listFeeds(): Promise<Feed[]> {
+  const { supabase } = await requireUser()
+  const { data, error } = await supabase
+    .from("feeds")
+    .select("*")
+    .order("title", { ascending: true })
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export async function listFeedItems(
+  input?: ListItemsInput
+): Promise<FeedItem[]> {
+  const { supabase } = await requireUser()
+  const values = input ? listItemsSchema.parse(input) : {}
+
+  let q = supabase
+    .from("feed_items")
+    .select("*")
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(200)
+
+  if (values.feedId) q = q.eq("feed_id", values.feedId)
+  if (values.unreadOnly) q = q.eq("read", false)
+
+  const { data, error } = await q
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export async function addFeed(url: string): Promise<Feed> {
+  const { supabase, userId } = await requireUser()
+  const values = addFeedSchema.parse({ url })
+
+  const { data: feed, error } = await supabase
+    .from("feeds")
+    .insert({ user_id: userId, url: values.url })
+    .select("*")
+    .single()
+
+  if (error) {
+    if (error.code === "23505") throw new Error("You've already added that feed.")
+    throw new Error(error.message)
+  }
+
+  // Best-effort initial fetch; keep the feed even if the first fetch fails.
+  try {
+    await fetchAndStore(supabase, userId, feed)
+  } catch {
+    // leave it — a later refresh can try again
+  }
+
+  revalidatePath("/news")
+  return feed
+}
+
+/** Refresh feeds; throttled unless `force`. Returns count of new items. */
+export async function refreshFeeds(force = false): Promise<{ newItems: number }> {
+  const { supabase, userId } = await requireUser()
+  const { data: feeds, error } = await supabase.from("feeds").select("*")
+  if (error) throw new Error(error.message)
+
+  const cutoff = Date.now() - REFRESH_THROTTLE_MS
+  const results = await Promise.all(
+    (feeds ?? []).map(async (f) => {
+      if (
+        !force &&
+        f.last_fetched_at &&
+        new Date(f.last_fetched_at).getTime() > cutoff
+      ) {
+        return 0
+      }
+      try {
+        return await fetchAndStore(supabase, userId, f)
+      } catch {
+        return 0
+      }
+    })
+  )
+
+  revalidatePath("/news")
+  return { newItems: results.reduce((a, b) => a + b, 0) }
+}
+
+export async function deleteFeed(id: string): Promise<void> {
+  const { supabase } = await requireUser()
+  const { error } = await supabase.from("feeds").delete().eq("id", id)
+  if (error) throw new Error(error.message)
+  revalidatePath("/news")
+}
+
+export async function setItemRead(id: string, read: boolean): Promise<void> {
+  const { supabase } = await requireUser()
+  const { error } = await supabase
+    .from("feed_items")
+    .update({ read })
+    .eq("id", id)
+  if (error) throw new Error(error.message)
+}
+
+export async function markAllRead(): Promise<void> {
+  const { supabase } = await requireUser()
+  const { error } = await supabase
+    .from("feed_items")
+    .update({ read: true })
+    .eq("read", false)
+  if (error) throw new Error(error.message)
+  revalidatePath("/news")
+}

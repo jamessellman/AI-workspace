@@ -81,10 +81,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Authenticated users hitting login/signup/forgot go to the board.
+  // Authenticated users hitting login/signup/forgot go to the News home.
   if (user && REDIRECT_WHEN_AUTHED.includes(pathname)) {
     const url = request.nextUrl.clone()
-    url.pathname = "/board"
+    url.pathname = "/news"
     return NextResponse.redirect(url)
   }
 

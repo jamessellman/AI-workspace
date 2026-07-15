@@ -53,7 +53,7 @@ export function ResetPasswordForm() {
     }
     toast.success("Password updated")
     router.refresh()
-    router.replace("/board")
+    router.replace("/news")
   }
 
   return (

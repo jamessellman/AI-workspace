@@ -343,3 +343,62 @@ create policy "events_update_own" on public.events
 drop policy if exists "events_delete_own" on public.events;
 create policy "events_delete_own" on public.events
   for delete using (user_id = auth.uid());
+
+-- ===========================================================================
+-- feeds + feed_items  (RSS news homepage)
+-- ===========================================================================
+create table if not exists public.feeds (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references auth.users (id) on delete cascade,
+  url             text not null,
+  title           text not null default '',
+  site_url        text,
+  last_fetched_at timestamptz,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  unique (user_id, url)
+);
+create index if not exists feeds_user_id_idx on public.feeds (user_id);
+
+drop trigger if exists feeds_set_updated_at on public.feeds;
+create trigger feeds_set_updated_at
+  before update on public.feeds
+  for each row execute function public.set_updated_at();
+
+create table if not exists public.feed_items (
+  id           uuid primary key default gen_random_uuid(),
+  user_id      uuid not null references auth.users (id) on delete cascade,
+  feed_id      uuid not null references public.feeds (id) on delete cascade,
+  guid         text not null,
+  title        text not null default '',
+  url          text,
+  author       text,
+  summary      text,
+  published_at timestamptz,
+  read         boolean not null default false,
+  created_at   timestamptz not null default now(),
+  unique (feed_id, guid)
+);
+create index if not exists feed_items_user_idx on public.feed_items (user_id, published_at desc);
+create index if not exists feed_items_feed_idx on public.feed_items (feed_id);
+
+alter table public.feeds      enable row level security;
+alter table public.feed_items enable row level security;
+
+drop policy if exists "feeds_select_own" on public.feeds;
+create policy "feeds_select_own" on public.feeds for select using (user_id = auth.uid());
+drop policy if exists "feeds_insert_own" on public.feeds;
+create policy "feeds_insert_own" on public.feeds for insert with check (user_id = auth.uid());
+drop policy if exists "feeds_update_own" on public.feeds;
+create policy "feeds_update_own" on public.feeds for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "feeds_delete_own" on public.feeds;
+create policy "feeds_delete_own" on public.feeds for delete using (user_id = auth.uid());
+
+drop policy if exists "feed_items_select_own" on public.feed_items;
+create policy "feed_items_select_own" on public.feed_items for select using (user_id = auth.uid());
+drop policy if exists "feed_items_insert_own" on public.feed_items;
+create policy "feed_items_insert_own" on public.feed_items for insert with check (user_id = auth.uid());
+drop policy if exists "feed_items_update_own" on public.feed_items;
+create policy "feed_items_update_own" on public.feed_items for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "feed_items_delete_own" on public.feed_items;
+create policy "feed_items_delete_own" on public.feed_items for delete using (user_id = auth.uid());

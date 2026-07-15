@@ -47,7 +47,7 @@ export function SignupForm() {
       password: values.password,
       options: {
         data: { display_name: values.name?.trim() || null },
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/board`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/news`,
       },
     })
 

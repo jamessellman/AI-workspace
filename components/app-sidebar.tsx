@@ -7,6 +7,7 @@ import {
   Clock,
   FileText,
   KanbanSquare,
+  Newspaper,
   StickyNote,
 } from "lucide-react"
 
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/sidebar"
 
 const NAV_ITEMS = [
+  { title: "News", href: "/news", icon: Newspaper },
   { title: "Board", href: "/board", icon: KanbanSquare },
   { title: "Notes", href: "/notes", icon: StickyNote },
   { title: "Calendar", href: "/calendar", icon: CalendarDays },

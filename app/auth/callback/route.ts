@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 /** Only allow same-origin relative paths as the post-auth destination. */
 function safeNext(next: string | null): string {
   if (next && next.startsWith("/") && !next.startsWith("//")) return next
-  return "/board"
+  return "/news"
 }
 
 /**

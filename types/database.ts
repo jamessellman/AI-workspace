@@ -82,6 +82,60 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["folders"]["Insert"]>
         Relationships: []
       }
+      feeds: {
+        Row: {
+          id: string
+          user_id: string
+          url: string
+          title: string
+          site_url: string | null
+          last_fetched_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          url: string
+          title?: string
+          site_url?: string | null
+          last_fetched_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["feeds"]["Insert"]>
+        Relationships: []
+      }
+      feed_items: {
+        Row: {
+          id: string
+          user_id: string
+          feed_id: string
+          guid: string
+          title: string
+          url: string | null
+          author: string | null
+          summary: string | null
+          published_at: string | null
+          read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          feed_id: string
+          guid: string
+          title?: string
+          url?: string | null
+          author?: string | null
+          summary?: string | null
+          published_at?: string | null
+          read?: boolean
+          created_at?: string
+        }
+        Update: Partial<Database["public"]["Tables"]["feed_items"]["Insert"]>
+        Relationships: []
+      }
       events: {
         Row: {
           id: string
@@ -181,5 +235,7 @@ export type Task = Database["public"]["Tables"]["tasks"]["Row"]
 export type Note = Database["public"]["Tables"]["notes"]["Row"]
 export type Folder = Database["public"]["Tables"]["folders"]["Row"]
 export type CalendarEvent = Database["public"]["Tables"]["events"]["Row"]
+export type Feed = Database["public"]["Tables"]["feeds"]["Row"]
+export type FeedItem = Database["public"]["Tables"]["feed_items"]["Row"]
 export type Timesheet = Database["public"]["Tables"]["timesheets"]["Row"]
 export type DocumentRow = Database["public"]["Tables"]["documents"]["Row"]
