@@ -15,15 +15,24 @@ import {
 import { toast } from "sonner"
 
 import {
+  clearAllItems,
   deleteFeed,
   markAllRead,
   refreshFeeds,
   setItemRead,
 } from "@/lib/actions/feeds"
-import type { Feed, FeedItem } from "@/types/database"
+import type { Feed, FeedItemPreview } from "@/types/database"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,13 +42,14 @@ import {
 import { Spinner } from "@/components/ui/spinner"
 import { AddFeedDialog } from "@/components/news/add-feed-dialog"
 import { NewsDigestButton } from "@/components/news/news-digest"
+import { ReaderDialog } from "@/components/news/reader-dialog"
 
 export function NewsView({
   initialFeeds,
   initialItems,
 }: {
   initialFeeds: Feed[]
-  initialItems: FeedItem[]
+  initialItems: FeedItemPreview[]
 }) {
   const router = useRouter()
   const [feeds, setFeeds] = useState(initialFeeds)
@@ -47,6 +57,9 @@ export function NewsView({
   const [selected, setSelected] = useState<string>("all")
   const [unreadOnly, setUnreadOnly] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [readerItem, setReaderItem] = useState<FeedItemPreview | null>(null)
+  const [readerOpen, setReaderOpen] = useState(false)
+  const [clearOpen, setClearOpen] = useState(false)
   const [refreshing, startRefresh] = useTransition()
   const autoRan = useRef(false)
 
@@ -101,15 +114,24 @@ export function NewsView({
     })
   }
 
-  function openItem(item: FeedItem) {
-    if (item.url) window.open(item.url, "_blank", "noopener,noreferrer")
-    if (!item.read) {
-      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, read: true } : i)))
-      void setItemRead(item.id, true)
-    }
+  function markRead(item: FeedItemPreview) {
+    if (item.read) return
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, read: true } : i)))
+    void setItemRead(item.id, true)
   }
 
-  function toggleRead(item: FeedItem) {
+  function openReader(item: FeedItemPreview) {
+    markRead(item)
+    setReaderItem(item)
+    setReaderOpen(true)
+  }
+
+  function openSource(item: FeedItemPreview) {
+    if (item.url) window.open(item.url, "_blank", "noopener,noreferrer")
+    markRead(item)
+  }
+
+  function toggleRead(item: FeedItemPreview) {
     const next = !item.read
     setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, read: next } : i)))
     void setItemRead(item.id, next)
@@ -123,6 +145,20 @@ export function NewsView({
         router.refresh()
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Could not mark all read")
+      }
+    })
+  }
+
+  function onClearAll() {
+    setClearOpen(false)
+    setItems([])
+    startRefresh(async () => {
+      try {
+        await clearAllItems()
+        toast.success("Cleared — only new articles from now on")
+        router.refresh()
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not clear")
       }
     })
   }
@@ -193,13 +229,29 @@ export function NewsView({
           >
             Unread
           </Button>
-          <Button variant="outline" size="sm" onClick={onMarkAllRead}>
-            <CheckCheck />
-            Mark all read
-          </Button>
           <Button variant="outline" size="icon-sm" onClick={refreshNow} aria-label="Refresh" disabled={refreshing}>
             {refreshing ? <Spinner /> : <RefreshCw />}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon-sm" aria-label="More">
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={onMarkAllRead}>
+                <CheckCheck />
+                Mark all read
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => setClearOpen(true)}
+              >
+                <Trash2 />
+                Clear all articles
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <Plus />
             Add feed
@@ -237,7 +289,7 @@ export function NewsView({
                     ) : null}
                   </div>
                   <button
-                    onClick={() => openItem(item)}
+                    onClick={() => openReader(item)}
                     className="text-left"
                   >
                     <h3 className={cn("text-sm leading-snug break-words", !item.read && "font-semibold")}>
@@ -252,7 +304,7 @@ export function NewsView({
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   {item.url ? (
-                    <Button variant="ghost" size="icon-xs" onClick={() => openItem(item)} aria-label="Open article">
+                    <Button variant="ghost" size="icon-xs" onClick={() => openSource(item)} aria-label="Open original">
                       <ExternalLink />
                     </Button>
                   ) : null}
@@ -276,6 +328,33 @@ export function NewsView({
       )}
 
       <AddFeedDialog open={addOpen} onOpenChange={setAddOpen} />
+
+      <ReaderDialog
+        item={readerItem}
+        source={readerItem ? feedTitle(readerItem.feed_id) : ""}
+        open={readerOpen}
+        onOpenChange={setReaderOpen}
+      />
+
+      <Dialog open={clearOpen} onOpenChange={setClearOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear all articles?</DialogTitle>
+            <DialogDescription>
+              This removes every stored article. Your feeds stay, and only new
+              articles will appear from now on.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={onClearAll}>
+              Clear all
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

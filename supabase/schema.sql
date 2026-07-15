@@ -374,6 +374,7 @@ create table if not exists public.feed_items (
   url          text,
   author       text,
   summary      text,
+  content      text,
   published_at timestamptz,
   read         boolean not null default false,
   created_at   timestamptz not null default now(),

@@ -116,6 +116,7 @@ export interface Database {
           url: string | null
           author: string | null
           summary: string | null
+          content: string | null
           published_at: string | null
           read: boolean
           created_at: string
@@ -129,6 +130,7 @@ export interface Database {
           url?: string | null
           author?: string | null
           summary?: string | null
+          content?: string | null
           published_at?: string | null
           read?: boolean
           created_at?: string
@@ -237,5 +239,7 @@ export type Folder = Database["public"]["Tables"]["folders"]["Row"]
 export type CalendarEvent = Database["public"]["Tables"]["events"]["Row"]
 export type Feed = Database["public"]["Tables"]["feeds"]["Row"]
 export type FeedItem = Database["public"]["Tables"]["feed_items"]["Row"]
+/** A feed item without the heavy `content` field (for lists). */
+export type FeedItemPreview = Omit<FeedItem, "content">
 export type Timesheet = Database["public"]["Tables"]["timesheets"]["Row"]
 export type DocumentRow = Database["public"]["Tables"]["documents"]["Row"]
