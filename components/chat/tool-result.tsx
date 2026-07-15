@@ -10,6 +10,7 @@ import type {
   EventResult,
   FolderListResult,
   FolderResult,
+  NewsListResult,
   NoteListResult,
   NoteResult,
   TaskListResult,
@@ -336,6 +337,37 @@ export function ToolResult({
               </span>
             </div>
           ))}
+        </div>
+      )
+    }
+    case "list_news": {
+      const { items } = output as NewsListResult
+      if (items.length === 0) {
+        return <p className="text-muted-foreground text-xs">No recent articles.</p>
+      }
+      return (
+        <div className="space-y-1.5">
+          {items.slice(0, 15).map((it, i) => {
+            const href =
+              it.url && /^https?:\/\//i.test(it.url) ? it.url : null
+            return (
+              <div key={i} className="text-xs">
+                <span className="text-muted-foreground">{it.source}: </span>
+                {href ? (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    {it.title}
+                  </a>
+                ) : (
+                  <span>{it.title}</span>
+                )}
+              </div>
+            )
+          })}
         </div>
       )
     }

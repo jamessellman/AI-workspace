@@ -15,6 +15,7 @@ import {
   listEvents,
   updateEvent,
 } from "@/lib/actions/events"
+import { listFeedItems, listFeeds } from "@/lib/actions/feeds"
 import { createFolder, listFolders } from "@/lib/actions/folders"
 import { createNote, listNotes, searchNotes } from "@/lib/actions/notes"
 import { createTask, listTasks, moveTask, updateTask } from "@/lib/actions/tasks"
@@ -27,6 +28,7 @@ import type {
   EventResult,
   FolderListResult,
   FolderResult,
+  NewsListResult,
   NoteListResult,
   NoteResult,
   TaskListResult,
@@ -403,6 +405,43 @@ export const tools = {
     execute: async (input): Promise<DocumentListResult> => {
       const documents = await searchDocuments(input.query)
       return { documents, count: documents.length }
+    },
+  }),
+
+  list_news: tool({
+    description:
+      "List the user's recent news/newsletter articles from their RSS feeds, so you can brief or summarise them. Use for 'what's the news', 'brief me on today', etc. Optionally filter to unread or the last N hours.",
+    inputSchema: z.object({
+      unreadOnly: z.boolean().optional(),
+      hours: z
+        .number()
+        .optional()
+        .describe("Only include items from the last N hours."),
+    }),
+    execute: async (input): Promise<NewsListResult> => {
+      const [feeds, items] = await Promise.all([
+        listFeeds(),
+        listFeedItems({ unreadOnly: input.unreadOnly }),
+      ])
+      const title = new Map(feeds.map((f) => [f.id, f.title]))
+      const cutoff = input.hours ? Date.now() - input.hours * 3600 * 1000 : null
+      const filtered = items
+        .filter(
+          (i) =>
+            !cutoff ||
+            new Date(i.published_at ?? i.created_at).getTime() >= cutoff
+        )
+        .slice(0, 60)
+      return {
+        items: filtered.map((i) => ({
+          title: i.title,
+          source: title.get(i.feed_id) ?? "Feed",
+          url: i.url,
+          summary: i.summary,
+          published_at: i.published_at,
+        })),
+        count: filtered.length,
+      }
     },
   }),
 

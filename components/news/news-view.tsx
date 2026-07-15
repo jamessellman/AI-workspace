@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Spinner } from "@/components/ui/spinner"
 import { AddFeedDialog } from "@/components/news/add-feed-dialog"
+import { NewsDigestButton } from "@/components/news/news-digest"
 
 export function NewsView({
   initialFeeds,
@@ -184,6 +185,7 @@ export function NewsView({
           ))}
         </div>
         <div className="flex items-center gap-2">
+          <NewsDigestButton />
           <Button
             variant={unreadOnly ? "default" : "outline"}
             size="sm"

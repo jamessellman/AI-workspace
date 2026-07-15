@@ -1,9 +1,11 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { generateText } from "ai"
 import Parser from "rss-parser"
 
 import { requireUser } from "@/lib/actions/utils"
+import { chatModel } from "@/lib/ai/provider"
 import {
   addFeedSchema,
   listItemsSchema,
@@ -194,6 +196,65 @@ export async function setItemRead(id: string, read: boolean): Promise<void> {
     .update({ read })
     .eq("id", id)
   if (error) throw new Error(error.message)
+}
+
+/**
+ * Generate a concise, skimmable digest of recent articles so the user can stay
+ * current in a few minutes. Summarised server-side via the AI provider.
+ */
+export async function newsDigest(hours = 24): Promise<{
+  digest: string
+  count: number
+}> {
+  const { supabase } = await requireUser()
+
+  const [{ data: rows }, { data: feedRows }] = await Promise.all([
+    supabase
+      .from("feed_items")
+      .select("title, summary, url, published_at, created_at, feed_id")
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .limit(80),
+    supabase.from("feeds").select("id, title"),
+  ])
+
+  const feedTitle = new Map((feedRows ?? []).map((f) => [f.id, f.title]))
+  const cutoff = Date.now() - hours * 3600 * 1000
+  let items = (rows ?? []).filter((i) => {
+    const t = new Date(i.published_at ?? i.created_at).getTime()
+    return !Number.isNaN(t) && t >= cutoff
+  })
+  // If nothing in the window, fall back to the most recent handful.
+  if (items.length === 0) items = (rows ?? []).slice(0, 20)
+
+  if (items.length === 0) {
+    return { digest: "No articles yet — add feeds and hit Refresh.", count: 0 }
+  }
+
+  const lines = items
+    .slice(0, 60)
+    .map((i) => {
+      const src = feedTitle.get(i.feed_id) ?? "Feed"
+      const summary = i.summary ? ` — ${i.summary.slice(0, 300)}` : ""
+      return `- [${src}] ${i.title}${i.url ? ` (${i.url})` : ""}${summary}`
+    })
+    .join("\n")
+
+  const { text } = await generateText({
+    model: chatModel(),
+    system:
+      "You are a sharp tech-news editor. Produce a skimmable daily brief a busy developer can read in under 15 minutes.",
+    prompt: [
+      "Summarise the articles below into a short daily brief.",
+      "Group by theme with `## ` headings (e.g. AI, Software Engineering, Tools, Other).",
+      "Under each theme, 3–6 one-sentence bullets, each stating the key point and ending with a markdown link to the source, like [Source](url).",
+      "Lead with the 1–2 most important items. Prioritise AI and software engineering. Skip fluff and duplicates. Do not invent anything not in the list.",
+      "",
+      "Articles:",
+      lines,
+    ].join("\n"),
+  })
+
+  return { digest: text.trim(), count: items.length }
 }
 
 export async function markAllRead(): Promise<void> {

@@ -36,6 +36,7 @@ const TOOL_LABELS: Record<string, string> = {
   list_time: "Time loaded",
   search_documents: "Documents found",
   summarise_document: "Document summarised",
+  list_news: "News loaded",
 }
 
 type ToolUIPart = {

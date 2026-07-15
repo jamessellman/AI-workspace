@@ -77,6 +77,19 @@ export interface EventListResult {
   count: number
 }
 
+export interface NewsItemLite {
+  title: string
+  source: string
+  url: string | null
+  summary: string | null
+  published_at: string | null
+}
+
+export interface NewsListResult {
+  items: NewsItemLite[]
+  count: number
+}
+
 /** Names of every tool the model can call. Keep in sync with `tools.ts`. */
 export type ToolName =
   | "create_task"
@@ -96,3 +109,4 @@ export type ToolName =
   | "list_time"
   | "search_documents"
   | "summarise_document"
+  | "list_news"
