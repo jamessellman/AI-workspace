@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { extract } from "@extractus/article-extractor"
 import { generateText } from "ai"
 import Parser from "rss-parser"
 
@@ -149,12 +150,23 @@ export async function listFeedItems(
   return (data ?? []) as FeedItemPreview[]
 }
 
-/** Full content for the in-app reader (fetched on demand). */
-export async function getFeedItemContent(id: string): Promise<{
-  content: string | null
+const READER_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"
+const FEED_FULL_MIN = 1200 // feed content this long is treated as the full article
+const EXTRACT_MIN = 400 // extracted content shorter than this is treated as a miss
+
+/**
+ * Article for the in-app reader. Uses the feed's own content when it's
+ * substantial; otherwise fetches the linked page and extracts the readable
+ * article ("reader mode"), caching the result. Falls back to null html (the UI
+ * then offers "Open original") when the source blocks us or has no article.
+ */
+export async function getReaderArticle(id: string): Promise<{
+  html: string | null
+  summary: string | null
   url: string | null
   title: string
-  summary: string | null
+  extracted: boolean
 }> {
   const { supabase } = await requireUser()
   const { data, error } = await supabase
@@ -163,7 +175,51 @@ export async function getFeedItemContent(id: string): Promise<{
     .eq("id", id)
     .single()
   if (error) throw new Error(error.message)
-  return data
+
+  if (data.content && data.content.length >= FEED_FULL_MIN) {
+    return {
+      html: data.content,
+      summary: data.summary,
+      url: data.url,
+      title: data.title,
+      extracted: false,
+    }
+  }
+
+  if (data.url) {
+    try {
+      const article = await extract(
+        data.url,
+        {},
+        {
+          signal: AbortSignal.timeout(12_000),
+          headers: { "user-agent": READER_UA },
+        }
+      )
+      if (article?.content && article.content.length >= EXTRACT_MIN) {
+        const html = article.content.slice(0, MAX_CONTENT_CHARS)
+        // Cache so re-opening is instant.
+        await supabase.from("feed_items").update({ content: html }).eq("id", id)
+        return {
+          html,
+          summary: data.summary,
+          url: data.url,
+          title: data.title,
+          extracted: true,
+        }
+      }
+    } catch {
+      // blocked / paywalled / no article — fall through to the excerpt
+    }
+  }
+
+  return {
+    html: data.content && data.content.length >= EXTRACT_MIN ? data.content : null,
+    summary: data.summary,
+    url: data.url,
+    title: data.title,
+    extracted: false,
+  }
 }
 
 export async function addFeed(url: string): Promise<Feed> {
@@ -311,6 +367,37 @@ export async function newsDigest(hours = 24): Promise<{
   })
 
   return { digest: text.trim(), count: items.length }
+}
+
+function stripText(html: string, max: number): string {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max)
+}
+
+/** Summarise a single article into a few bullets, read in-app. Uses the feed's
+ * content or the extracted article; falls back to the excerpt if neither. */
+export async function summariseArticle(id: string): Promise<{ summary: string }> {
+  const article = await getReaderArticle(id)
+  const source = article.html
+    ? stripText(article.html, 12_000)
+    : article.summary || article.title || ""
+  if (!source.trim()) {
+    return { summary: "There's nothing to summarise for this article." }
+  }
+  const { text } = await generateText({
+    model: chatModel(),
+    system:
+      "You write clear, concise article summaries. No preamble — just the summary.",
+    prompt: `Summarise the article "${article.title}" in 4-6 short bullet points capturing the key takeaways.\n\n${source}`,
+  })
+  return { summary: text.trim() }
 }
 
 export async function markAllRead(): Promise<void> {
