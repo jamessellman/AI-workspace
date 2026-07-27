@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dialog"
 import { BoardColumn } from "@/components/board/board-column"
 import { TaskCardContent } from "@/components/board/task-card"
+import { TaskDetailDialog } from "@/components/board/task-detail-dialog"
 import { TaskDialog } from "@/components/board/task-dialog"
 
 type Columns = Record<TaskStatus, Task[]>
@@ -84,6 +85,10 @@ export function Board({ initialTasks }: { initialTasks: Task[] }) {
 
   // Delete confirmation.
   const [pendingDelete, setPendingDelete] = useState<Task | null>(null)
+
+  // Task detail popup.
+  const [detailTask, setDetailTask] = useState<Task | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -194,6 +199,11 @@ export function Board({ initialTasks }: { initialTasks: Task[] }) {
     setDialogOpen(true)
   }
 
+  function handleOpen(task: Task) {
+    setDetailTask(task)
+    setDetailOpen(true)
+  }
+
   function handleMove(task: Task, status: TaskStatus) {
     // Optimistic: move locally, then persist via the status-only action.
     const current = columnsRef.current
@@ -260,6 +270,7 @@ export function Board({ initialTasks }: { initialTasks: Task[] }) {
               onEdit={handleEdit}
               onDelete={setPendingDelete}
               onMove={handleMove}
+              onOpen={handleOpen}
             />
           ))}
         </div>
@@ -278,6 +289,13 @@ export function Board({ initialTasks }: { initialTasks: Task[] }) {
         onOpenChange={setDialogOpen}
         task={editingTask}
         defaultStatus={dialogStatus}
+      />
+
+      <TaskDetailDialog
+        task={detailTask}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onEdit={handleEdit}
       />
 
       <Dialog

@@ -9,6 +9,12 @@ export type TaskStatus = "backlog" | "todo" | "in_progress" | "complete"
 
 export type Recurrence = "none" | "daily" | "weekly" | "monthly" | "yearly"
 
+export interface ChecklistItem {
+  id: string
+  text: string
+  done: boolean
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -22,6 +28,7 @@ export interface Database {
           order_index: number
           due_date: string | null
           document_id: string | null
+          checklist: ChecklistItem[]
           created_at: string
           updated_at: string
         }
@@ -34,6 +41,7 @@ export interface Database {
           order_index?: number
           due_date?: string | null
           document_id?: string | null
+          checklist?: ChecklistItem[]
           created_at?: string
           updated_at?: string
         }

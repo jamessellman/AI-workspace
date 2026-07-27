@@ -11,7 +11,12 @@ import {
   type TaskPosition,
   type UpdateTaskInput,
 } from "@/lib/validation/task"
-import type { Database, Task, TaskStatus } from "@/types/database"
+import type {
+  ChecklistItem,
+  Database,
+  Task,
+  TaskStatus,
+} from "@/types/database"
 
 type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"]
 
@@ -162,6 +167,29 @@ export async function reorderTasks(positions: TaskPosition[]): Promise<void> {
 export async function deleteTask(id: string): Promise<void> {
   const { supabase } = await requireUser()
   const { error } = await supabase.from("tasks").delete().eq("id", id)
+  if (error) throw new Error(error.message)
+  revalidatePath("/board")
+}
+
+/** Replace a task's checklist. The client owns the array (add/toggle/remove/
+ * reorder) and persists the whole thing. */
+export async function setTaskChecklist(
+  id: string,
+  items: ChecklistItem[]
+): Promise<void> {
+  const { supabase } = await requireUser()
+  // Normalise/validate the incoming array (client-generated ids/text).
+  const clean: ChecklistItem[] = (Array.isArray(items) ? items : [])
+    .slice(0, 100)
+    .map((i) => ({
+      id: String(i.id).slice(0, 64),
+      text: String(i.text ?? "").slice(0, 500),
+      done: Boolean(i.done),
+    }))
+  const { error } = await supabase
+    .from("tasks")
+    .update({ checklist: clean })
+    .eq("id", id)
   if (error) throw new Error(error.message)
   revalidatePath("/board")
 }

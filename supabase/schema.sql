@@ -40,6 +40,7 @@ create table if not exists public.tasks (
   order_index integer not null default 0,
   due_date    date,
   document_id uuid,
+  checklist   jsonb not null default '[]'::jsonb,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );

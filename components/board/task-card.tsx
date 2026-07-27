@@ -6,6 +6,7 @@ import { format } from "date-fns"
 import {
   CalendarClock,
   GripVertical,
+  ListChecks,
   MoreHorizontal,
   Pencil,
   Trash2,
@@ -44,6 +45,10 @@ function DueDateBadge({ task }: { task: Task }) {
 }
 
 export function TaskCardContent({ task }: { task: Task }) {
+  const checklist = task.checklist ?? []
+  const doneCount = checklist.filter((i) => i.done).length
+  const hasBadges = Boolean(task.due_date) || checklist.length > 0
+
   return (
     <div className="min-w-0 flex-1 space-y-1.5">
       <p className="text-sm leading-snug font-medium break-words">
@@ -54,9 +59,20 @@ export function TaskCardContent({ task }: { task: Task }) {
           {task.description}
         </p>
       ) : null}
-      {task.due_date ? (
-        <div className="flex flex-wrap gap-1 pt-0.5">
+      {hasBadges ? (
+        <div className="flex flex-wrap items-center gap-1 pt-0.5">
           <DueDateBadge task={task} />
+          {checklist.length > 0 ? (
+            <Badge
+              variant={
+                doneCount === checklist.length ? "default" : "secondary"
+              }
+              className="gap-1"
+            >
+              <ListChecks className="size-3" />
+              {doneCount}/{checklist.length}
+            </Badge>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -68,11 +84,13 @@ export function SortableTaskCard({
   onEdit,
   onDelete,
   onMove,
+  onOpen,
 }: {
   task: Task
   onEdit: (task: Task) => void
   onDelete: (task: Task) => void
   onMove: (task: Task, status: TaskStatus) => void
+  onOpen: (task: Task) => void
 }) {
   const {
     attributes,
@@ -93,6 +111,7 @@ export function SortableTaskCard({
       ref={setNodeRef}
       style={style}
       data-slot="task-card"
+      onClick={() => onOpen(task)}
       {...attributes}
       {...listeners}
       className={cn(
@@ -118,8 +137,9 @@ export function SortableTaskCard({
             variant="ghost"
             size="icon-xs"
             aria-label="Task actions"
-            // Don't let interacting with the menu start a drag.
+            // Don't let interacting with the menu start a drag or open detail.
             onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             className="opacity-60 transition-opacity group-hover/task:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
           >
             <MoreHorizontal />

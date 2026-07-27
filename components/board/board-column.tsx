@@ -21,6 +21,7 @@ export function BoardColumn({
   onEdit,
   onDelete,
   onMove,
+  onOpen,
 }: {
   status: TaskStatus
   tasks: Task[]
@@ -28,6 +29,7 @@ export function BoardColumn({
   onEdit: (task: Task) => void
   onDelete: (task: Task) => void
   onMove: (task: Task, status: TaskStatus) => void
+  onOpen: (task: Task) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
@@ -71,6 +73,7 @@ export function BoardColumn({
               onEdit={onEdit}
               onDelete={onDelete}
               onMove={onMove}
+              onOpen={onOpen}
             />
           ))}
         </SortableContext>
