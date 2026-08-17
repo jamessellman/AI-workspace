@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "eslint"
   },
+  "overrides": {
+    "postcss": "^8.5.26"
+  },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.72",
     "@ai-sdk/react": "^3.0.209",
